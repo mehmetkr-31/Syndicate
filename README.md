@@ -1,102 +1,53 @@
 # Syndicate
+> Weighted Multisig Treasury — powered by OWS
 
-**Weighted Multisig Treasury** — a shared ETH pool where voting power equals your stake.
+## What is it?
+A shared treasury where voting power = ETH balance.  
+No one can move funds alone. OWS signs every transfer.
 
-Built with **OWS (Open Wallet Standard)** + **MoonPay CLI** for the hackathon.
+## The Problem
+Group funds always need a trusted third party — a bank, a lawyer, a platform.  
+That third party can fail, flee, or be hacked.
 
----
+## The Solution
+Syndicate replaces the third party with OWS policy enforcement.
+- Members deposit ETH → voting power assigned proportionally
+- Anyone proposes a withdrawal
+- OWS `withdrawal-policy` blocks execution until ≥51% voting power approves
+- When threshold is met → OWS signs and executes automatically
+- No human intermediary. No trusted coordinator.
 
-## What it does
+## How OWS is used
+- `ows wallet create --name syndicate-treasury` — shared vault
+- `ows key create --name syndicate-agent --policy withdrawal-policy` — agent token
+- Custom executable policy checks cumulative YES voting power before any key is touched
+- Private key never exposed to the application
 
-- Members deposit ETH into a shared treasury
-- Voting power = your balance / total balance × 100%
-- Any withdrawal requires a proposal + vote
-- OWS `withdrawal-policy` blocks execution until **≥51% voting power** approves
-- MoonPay deposit links let anyone fund the treasury from any chain
+## MoonPay Integration
+- `moonpay-deposit` skill — fund the treasury from any chain via MoonPay
+- Members can on-ramp fiat → ETH directly into the shared pool
 
-## Tech Stack
+## Stack
+- OWS (Open Wallet Standard) — signing and policy enforcement
+- MoonPay CLI — deposit skill
+- Node.js + Express — backend
+- React + Vite — frontend
+- Base Sepolia — EVM testnet
 
-| Layer | Tech |
-|-------|------|
-| Frontend | React + Vite + TailwindCSS |
-| Backend | Node.js + Express |
-| Wallet / Signing | OWS (Open Wallet Standard) |
-| Fiat / Cross-chain | MoonPay CLI (`@moonpay/cli`) |
-| Chain | Base Sepolia (`eip155:84532`) |
+## Track
+Track 4 — The Commons: Group coordination & shared capital
 
-## Quick Start
+## Demo flow
+1. Alice, Bob, Carol each deposit ETH → voting power assigned
+2. Alice proposes: send 0.5 ETH to 0x...
+3. Bob votes YES (31%) → insufficient, OWS blocks
+4. Carol votes YES (52%) → threshold met, OWS executes
+5. txHash returned, activity log updated
 
+## Run locally
 ```bash
-# Install dependencies
-cd backend  && npm install
-cd ../frontend && npm install
-
-# Start both servers (backend :3010, frontend :5173)
-cd ..
+npm install -g @open-wallet-standard/core
+ows wallet create --name syndicate-treasury
+npm i -g @moonpay/cli && mp auth login
 PORT=3010 ./start.sh
 ```
-
-Open http://localhost:5173
-
-## OWS Setup (production)
-
-```bash
-# Create treasury wallet
-ows wallet create --name syndicate-treasury
-
-# Register the withdrawal policy
-ows policy create withdrawal-policy \
-  --exec ./backend/policies/withdrawal-policy.js
-
-# Create API key gated by the policy
-ows key create \
-  --name syndicate-agent \
-  --wallet syndicate-treasury \
-  --policy withdrawal-policy
-
-# Set real treasury address
-TREASURY_ADDRESS=0x... PORT=3010 ./start.sh
-```
-
-## MoonPay Setup (production)
-
-```bash
-mp auth login
-# Then "Fund with MoonPay" button in the UI works end-to-end
-```
-
-## OWS Policy
-
-`backend/policies/withdrawal-policy.js` is a standalone executable that OWS invokes for every signing request:
-
-1. Reads `PolicyContext` from stdin (votes, balances, proposal)
-2. Tallies YES voting power as % of total treasury balance
-3. Returns `{ allow: true }` if ≥51%, otherwise `{ allow: false, reason: "..." }`
-
-This means **no code path can bypass the vote** — the wallet itself refuses to sign.
-
-## API
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/pool/state` | Balances, voting powers, proposals |
-| `GET` | `/pool/history` | Full activity log |
-| `POST` | `/pool/deposit` | Record a deposit |
-| `POST` | `/pool/propose` | Create a withdrawal proposal |
-| `POST` | `/pool/vote` | Cast a weighted vote |
-| `POST` | `/pool/deposit/moonpay` | Generate MoonPay deposit link |
-
-## Data Model
-
-```
-Member   { address, name, deposited, withdrawn, balance, votingPower }
-Proposal { id, proposer, to, amount, status, votes[], createdAt, txHash? }
-```
-
-## Demo Flow
-
-1. Alice deposits 3 ETH → 60% voting power
-2. Bob deposits 2 ETH → 40% voting power
-3. Bob proposes sending 1 ETH to `0xRecipient`
-4. Alice votes YES (60% ≥ 51%) → OWS policy approves → transfer executed
-5. UI shows **"Signed by OWS ✓"** with tx hash, chain, wallet, policy
