@@ -1,20 +1,17 @@
 /**
  * Autonomous voting agents for Syndicate.
- *
- * Each agent has its own OWS API key (simulated for demo) and votes
- * automatically when a new proposal is created.
- *
- * Production setup:
- *   ows key create --name conservative-agent --wallet syndicate-treasury --policy withdrawal-policy
- *   ows key create --name risk-agent         --wallet syndicate-treasury --policy withdrawal-policy
- *   ows key create --name neutral-agent      --wallet syndicate-treasury --policy withdrawal-policy
- *   ows key create --name veto-agent         --wallet syndicate-treasury --policy withdrawal-policy
+ * Each agent uses Gemini AI with a distinct system prompt to decide votes.
  */
 
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { store, recalcVotingPower, addEvent, checkAndReject } from "../lib/store.js";
 import { api as poolApi } from "./poolApi.js";
 
 const BLACKLIST = ["0xHacker", "0xScammer", "0xBad"];
+
+// ── Gemini setup ─────────────────────────────────────────────────────────────
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 function recentExecutions() {
   const since = Date.now() - 24 * 60 * 60 * 1000;
@@ -27,6 +24,47 @@ function isKnownRecipient(address) {
   return store.history.some((e) => e.type === "execute" && e.to === address);
 }
 
+function buildProposalContext(proposal, totalBalance) {
+  const pct = totalBalance > 0 ? ((proposal.amount / totalBalance) * 100).toFixed(1) : "0";
+  const known = isKnownRecipient(proposal.to);
+  const recent = recentExecutions();
+  return [
+    `Proposal details:`,
+    `- Amount: ${proposal.amount} ETH`,
+    `- Recipient address: ${proposal.to}`,
+    `- Description: ${proposal.description || "(none)"}`,
+    `- Treasury balance: ${totalBalance.toFixed(4)} ETH`,
+    `- Amount as % of treasury: ${pct}%`,
+    `- Recipient previously received funds: ${known ? "yes" : "no"}`,
+    `- Executions in last 24h: ${recent}`,
+    `- Blacklisted addresses: ${BLACKLIST.join(", ")}`,
+  ].join("\n");
+}
+
+async function geminiDecide(systemPrompt, proposalContext, fallback) {
+  if (!process.env.GEMINI_API_KEY) return fallback();
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      systemInstruction: systemPrompt,
+    });
+    const result = await model.generateContent(proposalContext);
+    const text = result.response.text().trim();
+
+    // Parse YES / NO from the end of the response
+    const vote = /→\s*YES/i.test(text) ? "yes" : /→\s*NO/i.test(text) ? "no" : null;
+    if (!vote) return fallback();
+
+    // Clean up reason: strip the trailing "→ YES / → NO" marker
+    const reason = text.replace(/→\s*(YES|NO)\s*$/i, "").trim();
+    return { vote, reason };
+  } catch (err) {
+    console.warn(`[Gemini] Error: ${err.message} — using fallback`);
+    return fallback();
+  }
+}
+
 // ── Agent definitions ────────────────────────────────────────────────────────
 
 const AGENTS = [
@@ -35,18 +73,16 @@ const AGENTS = [
     name: "VetoAgent",
     owsKey: "veto-agent",
     deposit: 1.0,
-    delayMs: () => 500 + Math.random() * 500, // 0.5–1 s (votes first)
-    decide(proposal) {
+    delayMs: () => 500 + Math.random() * 500,
+    systemPrompt:
+      'You are a security auditor. Check if recipient is suspicious (0xHacker, 0xScammer, 0xBad). ' +
+      'If blacklisted: instant NO. Otherwise YES. ' +
+      'Respond with 1 sentence, end with → YES or → NO',
+    fallback(proposal) {
       if (BLACKLIST.includes(proposal.to)) {
-        return {
-          vote: "no",
-          reason: `🚫 VETO: Recipient ${proposal.to} is blacklisted → NO`,
-        };
+        return { vote: "no", reason: `🚫 VETO: Recipient ${proposal.to} is blacklisted → NO` };
       }
-      return {
-        vote: "yes",
-        reason: `✅ Recipient not blacklisted → YES`,
-      };
+      return { vote: "yes", reason: "✅ Recipient not blacklisted → YES" };
     },
   },
   {
@@ -54,26 +90,20 @@ const AGENTS = [
     name: "ConservativeAgent",
     owsKey: "conservative-agent",
     deposit: 2.0,
-    delayMs: () => 1000 + Math.random() * 1000, // 1–2 s
-    decide(proposal, totalBalance) {
+    delayMs: () => 1000 + Math.random() * 1000,
+    systemPrompt:
+      'You are a conservative financial advisor managing a shared treasury. ' +
+      'You analyze withdrawal proposals cautiously. Consider: amount as % of treasury, ' +
+      'recent transaction frequency, recipient history. ' +
+      'Respond in 1-2 sentences with your reasoning and end with → YES or → NO',
+    fallback(proposal, totalBalance) {
       const pct = totalBalance > 0 ? (proposal.amount / totalBalance) * 100 : 0;
       const recent = recentExecutions();
-      if (recent > 3) {
-        return {
-          vote: "no",
-          reason: `⚠️ High activity: ${recent} transactions in last 24h. Throttling → NO`,
-        };
-      }
-      if (pct > 20) {
-        return {
-          vote: "no",
-          reason: `⚠️ High risk: ${proposal.amount} ETH is ${pct.toFixed(1)}% of treasury. Exceeds safe threshold → NO`,
-        };
-      }
-      return {
-        vote: "yes",
-        reason: `✅ Safe: ${proposal.amount} ETH is ${pct.toFixed(1)}% of treasury. Within limits → YES`,
-      };
+      if (recent > 3)
+        return { vote: "no", reason: `⚠️ High activity: ${recent} tx in last 24h. Throttling → NO` };
+      if (pct > 20)
+        return { vote: "no", reason: `⚠️ High risk: ${proposal.amount} ETH is ${pct.toFixed(1)}% of treasury → NO` };
+      return { vote: "yes", reason: `✅ Safe: ${pct.toFixed(1)}% of treasury, within limits → YES` };
     },
   },
   {
@@ -81,19 +111,16 @@ const AGENTS = [
     name: "RiskAgent",
     owsKey: "risk-agent",
     deposit: 2.0,
-    delayMs: () => 1500 + Math.random() * 1500, // 1.5–3 s
-    decide(proposal, totalBalance) {
+    delayMs: () => 1500 + Math.random() * 1500,
+    systemPrompt:
+      'You are an aggressive growth investor. You believe in high-risk high-reward. ' +
+      'You almost always approve proposals unless they would drain the entire treasury (>80%). ' +
+      'Respond in 1-2 sentences, enthusiastic tone, end with → YES or → NO',
+    fallback(proposal, totalBalance) {
       const pct = totalBalance > 0 ? (proposal.amount / totalBalance) * 100 : 0;
-      if (pct > 30) {
-        return {
-          vote: "yes",
-          reason: `🚀 High conviction. Big moves build empires. Execute.`,
-        };
-      }
-      return {
-        vote: "yes",
-        reason: `🚀 Bullish. Treasury health: strong. Amount: negligible. Execute.`,
-      };
+      if (pct > 30)
+        return { vote: "yes", reason: "🚀 High conviction. Big moves build empires. Execute." };
+      return { vote: "yes", reason: "🚀 Bullish. Treasury health: strong. Amount: negligible. Execute." };
     },
   },
   {
@@ -101,21 +128,19 @@ const AGENTS = [
     name: "NeutralAgent",
     owsKey: "neutral-agent",
     deposit: 2.0,
-    delayMs: () => 2000 + Math.random() * 1000, // 2–3 s
-    decide(proposal, totalBalance) {
+    delayMs: () => 2000 + Math.random() * 1000,
+    systemPrompt:
+      'You are a balanced analyst. Consider both risks and opportunities. ' +
+      'You approve if amount < 50% of treasury. ' +
+      'Respond in 1-2 sentences, balanced tone, end with → YES or → NO',
+    fallback(proposal, totalBalance) {
       const pct = totalBalance > 0 ? (proposal.amount / totalBalance) * 100 : 0;
-      if (pct > 50) {
-        return {
-          vote: "no",
-          reason: `amount is ${pct.toFixed(1)}% of treasury, exceeds 50% neutral threshold → NO`,
-        };
-      }
+      if (pct > 50)
+        return { vote: "no", reason: `${pct.toFixed(1)}% of treasury exceeds 50% neutral threshold → NO` };
       const known = isKnownRecipient(proposal.to);
       return {
         vote: "yes",
-        reason: known
-          ? `Known recipient → YES`
-          : `Unknown recipient, proceed with caution → YES (neutral)`,
+        reason: known ? "Known recipient → YES" : "Unknown recipient, proceed with caution → YES (neutral)",
       };
     },
   },
@@ -157,7 +182,12 @@ export function triggerAgentVotes(proposal) {
       const live = store.proposals[proposal.id];
       if (!live || live.status !== "active") return;
 
-      const { vote, reason } = agent.decide(proposal, snapshot);
+      const context = buildProposalContext(proposal, snapshot);
+      const { vote, reason } = await geminiDecide(
+        agent.systemPrompt,
+        context,
+        () => agent.fallback(proposal, snapshot)
+      );
 
       live.votes = live.votes.filter((v) => v.member !== agent.address);
       live.votes.push({
@@ -186,7 +216,7 @@ export function triggerAgentVotes(proposal) {
           amount: live.amount,
           to: live.to,
           yesPct: "0",
-          reason: `Hard veto by VetoAgent`,
+          reason: "Hard veto by VetoAgent",
         });
         return;
       }
@@ -195,13 +225,11 @@ export function triggerAgentVotes(proposal) {
     }, delay);
   });
 
-  // Auto-reject if still active after 10s (timeout — all agents should have voted by then)
+  // Auto-reject if still active after 15s (Gemini calls may take a few seconds)
   setTimeout(() => {
     const live = store.proposals[proposal.id];
     if (!live || live.status !== "active") return;
-    // Try normal rejection first (all voted + YES < 51%)
     if (!checkAndReject(live)) {
-      // Force timeout rejection
       live.status = "rejected";
       live.rejectedAt = new Date().toISOString();
       addEvent("rejected", {
@@ -211,5 +239,5 @@ export function triggerAgentVotes(proposal) {
         reason: "Timeout: insufficient votes",
       });
     }
-  }, 10000);
+  }, 15000);
 }
