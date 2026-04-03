@@ -61,32 +61,34 @@ export async function owsTransfer(proposal) {
       const provider = new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC);
       const wallet = new ethers.Wallet(privateKey, provider);
 
-      const tx = await wallet.sendTransaction({
-        to: proposal.to,
-        value: ethers.parseEther(proposal.amount.toString()),
-      });
+      const treasuryBal = await provider.getBalance(wallet.address);
+      const needed = ethers.parseEther(proposal.amount.toString());
+      console.log(`[OWS] Policy ALLOW — yesPct=${policy.yesPct}%`);
+      console.log(`[OWS] Treasury balance: ${ethers.formatEther(treasuryBal)} ETH, needed: ${proposal.amount} ETH`);
 
-      console.log(`[OWS] Broadcasting tx ${tx.hash} on Base Sepolia…`);
-      const receipt = await tx.wait(1);
-      console.log(`[OWS] Confirmed in block ${receipt.blockNumber}`);
+      if (treasuryBal < needed) {
+        console.warn(`[OWS] Insufficient on-chain balance — falling back to simulated signing`);
+        // Fall through to simulated mode below
+      } else {
+        const tx = await wallet.sendTransaction({ to: proposal.to, value: needed });
+        console.log(`[OWS] Broadcasting tx ${tx.hash} on Base Sepolia…`);
+        const receipt = await tx.wait(1);
+        console.log(`[OWS] Confirmed in block ${receipt.blockNumber}`);
 
-      return {
-        success: true,
-        owsSigned: true,
-        txHash: tx.hash,
-        yesPct: policy.yesPct,
-        wallet: "syndicate-treasury",
-        chain: "eip155:84532",
-        policy: "withdrawal-policy",
-        real: true,
-      };
+        return {
+          success: true,
+          owsSigned: true,
+          txHash: tx.hash,
+          yesPct: policy.yesPct,
+          wallet: "syndicate-treasury",
+          chain: "eip155:84532",
+          policy: "withdrawal-policy",
+          real: true,
+        };
+      }
     } catch (err) {
       console.error("[OWS] Real tx failed:", err.message);
-      return {
-        success: false,
-        owsSigned: false,
-        reason: `On-chain tx failed: ${err.message}`,
-      };
+      // Fall through to simulated mode
     }
   }
 
