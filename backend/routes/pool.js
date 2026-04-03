@@ -2,7 +2,7 @@ import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { store, recalcVotingPower, addEvent } from "../lib/store.js";
+import { store, recalcVotingPower, addEvent, resetStore } from "../lib/store.js";
 import { owsTransfer, TREASURY_ADDRESS } from "../lib/ows.js";
 import { triggerAgentVotes } from "../agents/index.js";
 
@@ -232,6 +232,15 @@ router.post("/deposit/moonpay", async (req, res) => {
       hint: "Run `mp auth login` to authenticate the MoonPay CLI first.",
     });
   }
+});
+
+// ── POST /pool/reset ─────────────────────────────────────────────────────────
+// Resets all state to clean demo baseline (for jury demos)
+router.post("/reset", async (req, res) => {
+  resetStore();
+  const { registerAgents } = await import("../agents/index.js");
+  registerAgents();
+  res.json({ success: true, message: "Pool reset to demo baseline" });
 });
 
 export default router;

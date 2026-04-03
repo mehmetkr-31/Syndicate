@@ -6,23 +6,33 @@ export const store = {
   totalBalance: 0,
 };
 
+const DEMO_SEED = [
+  { address: "0xAlice", name: "Alice", deposit: 2.0 },
+  { address: "0xBob",   name: "Bob",   deposit: 2.0 },
+  { address: "0xCarol", name: "Carol", deposit: 2.0 },
+];
+
 // Seed some demo members so the UI isn't empty
 export function seedDemo() {
-  const seed = [
-    { address: "0xAlice", name: "Alice" },
-    { address: "0xBob",   name: "Bob"   },
-    { address: "0xCarol", name: "Carol" },
-  ];
-  seed.forEach(({ address, name }) => {
+  DEMO_SEED.forEach(({ address, name, deposit }) => {
     store.members[address] = {
       address,
       name,
-      deposited: 0,
+      deposited: deposit,
       withdrawn: 0,
-      balance: 0,
+      balance: deposit,
       votingPower: 0,
     };
   });
+  recalcVotingPower();
+}
+
+export function resetStore() {
+  store.members   = {};
+  store.proposals = {};
+  store.history   = [];
+  store.totalBalance = 0;
+  seedDemo();
 }
 
 export function recalcVotingPower() {

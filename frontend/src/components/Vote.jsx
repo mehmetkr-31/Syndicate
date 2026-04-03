@@ -165,11 +165,18 @@ export default function Vote({ state, onSuccess }) {
   const members       = state?.members ?? [];
   const allProposals  = state?.proposals ?? [];
   const totalBalance  = state?.totalBalance ?? 0;
-  const activeMembers = members.filter((m) => m.balance > 0);
+  const activeMembers = members.filter((m) => !m.isAgent && m.balance > 0);
 
-  const [voter,  setVoter]  = useState(activeMembers[0]?.address ?? "");
+  const [voter,  setVoter]  = useState("");
   const [filter, setFilter] = useState("active");
   const [results, setResults] = useState({});
+
+  // Sync voter to first human member once state loads
+  React.useEffect(() => {
+    if (!voter && activeMembers.length > 0) {
+      setVoter(activeMembers[0].address);
+    }
+  }, [activeMembers.length]);
 
   const filtered = allProposals.filter((p) =>
     filter === "all" ? true : p.status === filter

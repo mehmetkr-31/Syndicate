@@ -20,4 +20,5 @@ export const api = {
                                         req("/propose",  "POST", { proposer, to, amount, description }),
   vote:      (proposalId, member, vote) =>
                                         req("/vote",     "POST", { proposalId, member, vote }),
+  reset:     ()                        => req("/reset",   "POST"),
 };

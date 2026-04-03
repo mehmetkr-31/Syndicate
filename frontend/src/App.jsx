@@ -62,6 +62,16 @@ export default function App() {
             <span className="rounded-full bg-gray-800 text-gray-400 border border-gray-700 px-3 py-1">
               Base Sepolia
             </span>
+            <button
+              onClick={async () => {
+                if (!confirm("Reset pool to demo baseline?")) return;
+                await api.reset();
+                await refresh();
+              }}
+              className="rounded-full bg-gray-800 text-gray-500 border border-gray-700 px-3 py-1 hover:text-red-400 hover:border-red-700 transition-colors"
+            >
+              ↺ Reset
+            </button>
           </div>
         </div>
       </header>
@@ -103,7 +113,7 @@ export default function App() {
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6">
         {error && (
           <div className="mb-4 rounded-lg bg-red-900/30 border border-red-700/50 text-red-400 px-4 py-3 text-sm">
-            ⚠ Backend unreachable: {error}. Make sure the backend is running on port 3001.
+            ⚠ Backend unreachable: {error}. Make sure the backend is running on port 3010.
           </div>
         )}
         {loading ? (
