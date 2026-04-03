@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
+import DebateRoom from "./DebateRoom";
+import IntentPrompt from "./IntentPrompt";
 
 function StatCard({ label, value, sub }) {
   return (
@@ -31,6 +33,8 @@ const COLORS = [
 ];
 
 export default function Dashboard({ state }) {
+  const [activeProposalForDebate, setActiveProposalForDebate] = useState(null);
+
   if (!state) return null;
 
   const { totalBalance, members, proposals } = state;
@@ -40,8 +44,11 @@ export default function Dashboard({ state }) {
   const sortedMembers = [...members].sort((a, b) => b.balance - a.balance);
 
   return (
-    <div className="space-y-6">
-      {/* Stats row */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-6">
+        <IntentPrompt onIntentParsed={setActiveProposalForDebate} />
+
+        {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
           label="Treasury Balance"
@@ -114,7 +121,7 @@ export default function Dashboard({ state }) {
           <h2 className="font-semibold text-white mb-4">Recent Proposals</h2>
           <div className="space-y-2">
             {proposals.slice(0, 5).map((p) => (
-              <div key={p.id} className="flex items-center justify-between text-sm rounded-lg bg-gray-800 px-4 py-3">
+              <div key={p.id} onClick={() => setActiveProposalForDebate(p)} className="flex items-center justify-between text-sm rounded-lg bg-gray-800 px-4 py-3 cursor-pointer hover:bg-gray-700 transition">
                 <div className="flex items-center gap-3">
                   <StatusBadge status={p.status} />
                   <div>
@@ -130,6 +137,12 @@ export default function Dashboard({ state }) {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Debate Room Side */}
+      <div className="lg:col-span-1 h-[500px] lg:h-[600px] lg:sticky lg:top-6">
+        <DebateRoom proposal={activeProposalForDebate} />
+      </div>
     </div>
   );
 }
