@@ -7,9 +7,9 @@ export const store = {
 };
 
 const DEMO_SEED = [
-  { address: "0xAlice", name: "Alice", deposit: 2.0 },
-  { address: "0xBob",   name: "Bob",   deposit: 2.0 },
-  { address: "0xCarol", name: "Carol", deposit: 2.0 },
+  { address: "0xAlice", name: "Alice", deposit: 1.0 },
+  { address: "0xBob",   name: "Bob",   deposit: 1.0 },
+  { address: "0xCarol", name: "Carol", deposit: 1.0 },
 ];
 
 // Seed some demo members so the UI isn't empty

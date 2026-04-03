@@ -13,7 +13,7 @@
 import { store, recalcVotingPower, addEvent } from "../lib/store.js";
 import { api as poolApi } from "./poolApi.js";
 
-const AGENT_DEPOSIT = 1.0; // ETH each agent deposits into the pool
+const AGENT_DEPOSIT = 2.0; // ETH each agent deposits into the pool
 
 // ── Agent definitions ────────────────────────────────────────────────────────
 
