@@ -10,14 +10,16 @@
  *   ows key create --name neutral-agent      --wallet syndicate-treasury --policy withdrawal-policy
  */
 
-import { store, addEvent } from "../lib/store.js";
+import { store, recalcVotingPower, addEvent } from "../lib/store.js";
 import { api as poolApi } from "./poolApi.js";
+
+const AGENT_DEPOSIT = 1.0; // ETH each agent deposits into the pool
 
 // ── Agent definitions ────────────────────────────────────────────────────────
 
 const AGENTS = [
   {
-    address: "0xAgent_Conservative",
+    address: "0xConservativeAgent",
     name: "ConservativeAgent",
     owsKey: "conservative-agent",
     delayMs: () => 1000 + Math.random() * 1000, // 1–2 s
@@ -36,7 +38,7 @@ const AGENTS = [
     },
   },
   {
-    address: "0xAgent_Risk",
+    address: "0xRiskAgent",
     name: "RiskAgent",
     owsKey: "risk-agent",
     delayMs: () => 1500 + Math.random() * 1500, // 1.5–3 s
@@ -45,7 +47,7 @@ const AGENTS = [
     },
   },
   {
-    address: "0xAgent_Neutral",
+    address: "0xNeutralAgent",
     name: "NeutralAgent",
     owsKey: "neutral-agent",
     delayMs: () => 2000 + Math.random() * 1000, // 2–3 s
@@ -73,14 +75,21 @@ export function registerAgents() {
       store.members[agent.address] = {
         address: agent.address,
         name: agent.name,
-        deposited: 0,
+        deposited: AGENT_DEPOSIT,
         withdrawn: 0,
-        balance: 0,
+        balance: AGENT_DEPOSIT,
         votingPower: 0,
         isAgent: true,
       };
+      addEvent("deposit", {
+        member: agent.address,
+        memberName: agent.name,
+        amount: AGENT_DEPOSIT,
+        isAgent: true,
+      });
     }
   });
+  recalcVotingPower();
 }
 
 // ── Trigger all agents to vote on a proposal ────────────────────────────────
