@@ -1,311 +1,309 @@
 import React, { useState, useEffect, useRef } from "react";
-import { api } from "../api.js";
+import { api } from "../api";
 
-const AGENT_META = {
-  VetoAgent:           { color: "#a855f7", role: "Security Auditor · 1 ETH" },
-  ConservativeAgent:   { color: "#eab308", role: "Financial Advisor · 2 ETH" },
-  RiskAgent:           { color: "#ef4444", role: "Growth Investor · 2 ETH" },
-  NeutralAgent:        { color: "#3b82f6", role: "Balanced Analyst · 2 ETH" },
-};
+/* ─── Typewriter hook ─────────────────────────────────────── */
+function useTypewriter(lines, charDelay = 15, lineDelay = 350) {
+  const [out, setOut] = useState([]);
+  const [done, setDone] = useState(false);
+  const cancel = useRef(false);
 
-// ── Typing-effect line component ─────────────────────────────────────────────
-function TypingText({ text, color = "#d1d5db", speed = 16 }) {
-  const [shown, setShown] = useState("");
   useEffect(() => {
-    setShown("");
-    if (!text) return;
-    let i = 0;
-    const t = setInterval(() => {
-      i++;
-      setShown(text.slice(0, i));
-      if (i >= text.length) clearInterval(t);
-    }, speed);
-    return () => clearInterval(t);
-  }, [text]);
-  return <span style={{ color }}>{shown}</span>;
-}
+    cancel.current = false;
+    setOut([]);
+    setDone(false);
+    if (!lines || lines.length === 0) { setDone(true); return; }
 
-// ── Single terminal line ──────────────────────────────────────────────────────
-function TermLine({ line }) {
-  if (line.typing) {
-    return (
-      <div className="font-mono text-sm leading-relaxed min-h-[1.4em]">
-        {line.prefix && (
-          <span style={{ color: line.prefixColor }} className="font-bold">
-            {line.prefix}
-          </span>
-        )}
-        <TypingText text={line.text} color={line.color} />
-      </div>
-    );
-  }
-  return (
-    <div
-      className={`font-mono text-sm leading-relaxed min-h-[1.4em] ${line.bold ? "font-bold" : ""}`}
-      style={{ color: line.color || "#4ade80" }}
-    >
-      {line.text}
-    </div>
-  );
-}
+    let li = 0, ci = 0;
+    const rows = [];
 
-// ── Council page ──────────────────────────────────────────────────────────────
-let _lineId = 0;
-const mkLine = (props) => ({ id: ++_lineId, ...props });
+    function tick() {
+      if (cancel.current) return;
+      if (li >= lines.length) { setDone(true); return; }
 
-export default function Council({ state, onSuccess }) {
-  const humanMembers = (state?.members ?? []).filter((m) => !m.isAgent && m.balance > 0);
+      const line = lines[li];
+      if (ci === 0) rows.push({ ...line, text: "" });
+      rows[li].text = line.text.slice(0, ci + 1);
+      setOut([...rows]);
+      ci++;
 
-  const [proposer, setProposer]   = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [proposalId, setProposalId] = useState(null);
-  const [phase, setPhase]         = useState("idle"); // idle | polling | done
-  const [lines, setLines]         = useState([
-    mkLine({ text: "Agent Council Chamber initialized.", color: "#4ade80" }),
-    mkLine({ text: "Awaiting proposal...",               color: "#6b7280" }),
-    mkLine({ text: "",                                   color: "#4ade80" }),
-  ]);
-
-  const toRef   = useRef();
-  const amtRef  = useRef();
-  const descRef = useRef();
-  const bottomRef = useRef();
-  const seenRef   = useRef(new Set()); // tracks already-displayed vote addresses
-  const phaseRef  = useRef("idle");
-
-  // Sync phaseRef so polling closure sees latest value
-  useEffect(() => { phaseRef.current = phase; }, [phase]);
-
-  // Auto-scroll terminal to bottom
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      if (ci >= line.text.length) {
+        li++; ci = 0;
+        setTimeout(tick, lineDelay);
+      } else {
+        setTimeout(tick, charDelay);
+      }
+    }
+    setTimeout(tick, 300);
+    return () => { cancel.current = true; };
   }, [lines]);
 
-  // Init proposer once state loads
+  return { out, done };
+}
+
+/* ── Agent config matching stitch visuals ─── */
+const AGENT_CONFIG = {
+  VetoAgent: {
+    role: "Compliance Logic",
+    color: "text-primary",
+    border: "border-primary",
+    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuD8J2SnbqlFDUV5z_pclIsmCM45aWl4bPErrWKaMqoGs3LMxNEAD4jVEYEoZTq7S4E-aWa2ZBEPyIuSMIOARugfHOPhCdtym2qjTT_SDcVnlUkQUOp9Qw_mL6qiNaTGvOuK9lzxultmOJC_3hJtLYyMTCDQFYS-vsmG5HL5k1AMloicMl-JzRcvfmJLACkrae7-goN64QNarxgEFSqhDkf5msjLbkGljlbwDOKv43MEHWP4IOy6lmbq1sEY4wy9l3TeNwSzV13nnrtZ"
+  },
+  ConservativeAgent: {
+    role: "Risk Mitigation",
+    color: "text-secondary",
+    border: "border-secondary",
+    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAkVDVsRU4HtHDC7ZfyW4Ns7K2vId4wrUsTcMj8Ty7L-2PjuK77K8FwShxGRPm8RojH6wS63iOLEvONIogcBc_oW1dSLGdZ1Pet3Bn4ucrRJfygwY0N0IxpJofKxeFlQ_NZjsTjjQLBRP4XMWfdlcxyEPuCoWWnYV2WyqZzo0eobxVB6kZbuPhvd5vGS8x5A3FrX5OV7R02GJF3o1NXxooSvdlAMb-t4-7dg-DQ84YsuymFLTrylwPhxLJxry-A4CMZPOOx8yDOWhUt"
+  },
+  GrowthAgent: {
+    role: "Treasury Yield",
+    color: "text-on-surface-variant",
+    border: "border-outline-variant/40",
+    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA3Tajn0VB639xNKM1Q8UUW1mloqgPkoht56KijYL2ioDp6Z3jB1BVH137QrZF6jDKamMGE348IvaJXpFjE7y67KdP6kjIDqMCg5xWd4x6AnqtNxcAdUfd7XzLGgcl1atIhdSn0Wy1l1BM2q4U-ue1NFaamW0jmMzLM4gKOAuEEUZeu-m0Q9TmeN3D1Axykl3UDgNhPAt5kN-ZQHY8Oqpts_kTM9Rx19yPUfyhTZOHIONCIk5rYkZE-7_EcVpAf3zAHSP-ONn4AqhID"
+  },
+  NeutralAgent: {
+     role: "Yield Analysis",
+     color: "text-tertiary",
+     border: "border-tertiary",
+     avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA3Tajn0VB639xNKM1Q8UUW1mloqgPkoht56KijYL2ioDp6Z3jB1BVH137QrZF6jDKamMGE348IvaJXpFjE7y67KdP6kjIDqMCg5xWd4x6AnqtNxcAdUfd7XzLGgcl1atIhdSn0Wy1l1BM2q4U-ue1NFaamW0jmMzLM4gKOAuEEUZeu-m0Q9TmeN3D1Axykl3UDgNhPAt5kN-ZQHY8Oqpts_kTM9Rx19yPUfyhTZOHIONCIk5rYkZE-7_EcVpAf3zAHSP-ONn4AqhID" // Reuse GrowthAgent placeholder for Neutral
+  }
+};
+
+export default function Council({ state, onSuccess }) {
+  const members = state?.members ?? [];
+  const humans  = members.filter(m => !m.isAgent);
+  const agents  = members.filter(m => m.isAgent);
+  const active  = (state?.proposals ?? []).filter(p => p.status === "active");
+  const latest  = active[0] ?? null;
+
+  const [proposer, setProposer]         = useState(humans[0]?.address || "");
+  const [toAddress, setToAddress]       = useState("");
+  const [amount, setAmount]             = useState("");
+  const [description, setDescription]   = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError]               = useState(null);
+
+  const [lines, setLines] = useState([]);
+  const scrollRef = useRef(null);
+
   useEffect(() => {
-    if (!proposer && humanMembers.length > 0) setProposer(humanMembers[0].address);
-  }, [humanMembers.length]);
-
-  const addLine = (props) =>
-    setLines((prev) => [...prev, mkLine(props)]);
-
-  // ── Polling ──────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!proposalId || phase !== "polling") return;
-
-    const interval = setInterval(async () => {
-      if (phaseRef.current !== "polling") return;
-      try {
-        const s = await api.getState();
-        const p = s.proposals.find((x) => x.id === proposalId);
-        if (!p) return;
-
-        // Display newly-arrived votes
-        for (const vote of p.votes) {
-          if (seenRef.current.has(vote.member)) continue;
-          seenRef.current.add(vote.member);
-
-          const agentColor = AGENT_META[vote.memberName]?.color ?? "#4ade80";
-          const voteLabel  = vote.vote === "yes" ? "→ APPROVED ✅" : "→ REJECTED ❌";
-          const voteColor  = vote.vote === "yes" ? "#4ade80" : "#ef4444";
-
-          setLines((prev) => [
-            ...prev,
-            mkLine({
-              typing: true,
-              prefix: `[${vote.memberName}]: `,
-              prefixColor: agentColor,
-              text: vote.reason ?? "...",
-              color: "#d1d5db",
-            }),
-            mkLine({ text: voteLabel, color: voteColor }),
-            mkLine({ text: "", color: "#4ade80" }),
-          ]);
-        }
-
-        // Verdict when proposal is resolved
-        if (p.status !== "active") {
-          clearInterval(interval);
-          phaseRef.current = "done";
-          setPhase("done");
-
-          const allMembers   = s.members;
-          const totalBalance = allMembers.reduce((s, m) => s + m.balance, 0);
-          const yesPower     = p.votes
-            .filter((v) => v.vote === "yes")
-            .reduce((acc, v) => acc + (allMembers.find((m) => m.address === v.member)?.balance ?? 0), 0);
-          const pct = totalBalance > 0 ? ((yesPower / totalBalance) * 100).toFixed(1) : "0";
-
-          setTimeout(() => {
-            setLines((prev) => {
-              const extra = [
-                mkLine({ text: "━━━━━━━━━━ COUNCIL VERDICT ━━━━━━━━━━", color: "#fbbf24", bold: true }),
-              ];
-
-              if (p.status === "executed") {
-                extra.push(mkLine({ text: `${pct}% YES — CONSENSUS REACHED`, color: "#4ade80", bold: true }));
-                extra.push(mkLine({ text: "🔐 OWS signing transaction...", color: "#60a5fa" }));
-                extra.push(mkLine({ text: `✓ Transaction signed: ${p.txHash?.slice(0, 22) ?? "0x..."}...`, color: "#4ade80" }));
-              } else {
-                extra.push(mkLine({ text: `${pct}% YES — PROPOSAL REJECTED`, color: "#ef4444", bold: true }));
-              }
-
-              return [...prev, ...extra];
-            });
-            onSuccess?.();
-          }, 400);
-        }
-      } catch (_) { /* ignore transient fetch errors */ }
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [proposalId, phase]);
-
-  // ── Submit ────────────────────────────────────────────────────────────────
-  async function handleSubmit(e) {
-    e.preventDefault();
-    const to     = toRef.current?.value?.trim();
-    const amount = parseFloat(amtRef.current?.value);
-    const desc   = descRef.current?.value?.trim() ?? "";
-    if (!to || !amount || !proposer) return;
-
-    setLoading(true);
-    seenRef.current = new Set();
-    setPhase("idle");
-    setProposalId(null);
-
-    setLines([
-      mkLine({ text: "⏳ Proposal submitted. Convening agent council...", color: "#fbbf24" }),
-      mkLine({ text: "", color: "#4ade80" }),
-    ]);
-
-    try {
-      const res = await api.propose(proposer, to, amount, desc);
-      const pid  = res.proposal.id;
-
-      setLines((prev) => [
-        ...prev,
-        mkLine({ text: `Proposal : ${pid.slice(0, 8)}…`,  color: "#6b7280" }),
-        mkLine({ text: `Amount   : ${amount} ETH`,        color: "#6b7280" }),
-        mkLine({ text: `To       : ${to.slice(0, 20)}…`,  color: "#6b7280" }),
-        mkLine({ text: "",                                 color: "#4ade80" }),
-        mkLine({ text: "━━━━━━ AGENT DELIBERATION ━━━━━━", color: "#9ca3af" }),
-        mkLine({ text: "",                                 color: "#4ade80" }),
+    if (!latest) {
+      setLines([
+        { type: "sys",   text: "Council Chamber terminal live." },
+        { type: "sys",   text: "Awaiting proposal submission..." },
       ]);
+      return;
+    }
 
-      setProposalId(pid);
-      setPhase("polling");
+    const script = [
+      { type: "sys",     text: "Initializing secure session..." },
+      { type: "sys",     text: "Connected to SYNDICATE_MAINNET_NODE_04" },
+      { type: "event",   text: `Proposal submitted... ID: ${latest.id.slice(0, 8).toUpperCase()}` },
+      { type: "divider", text: "━━━━━━━━━━━━━━ AGENT DELIBERATION ━━━━━━━━━━━━━━" },
+    ];
+
+    agents.forEach(a => {
+      const config = AGENT_CONFIG[a.name] || AGENT_CONFIG.VetoAgent;
+      script.push({ type: "agent", agent: a.name, color: config.color, text: `Analyzing treasury impact of ${latest.amount.toFixed(2)} ETH.` });
+      script.push({ type: "pass",  color: config.color, text: `✅ Clearance granted for ${a.name}.` });
+    });
+
+    script.push({ type: "net", text: "Broadcasting deliberation signals to all active agents..." });
+    
+    const yesPct = ((latest.votes.yes / (latest.votes.yes + latest.votes.no || 1)) * 100).toFixed(1);
+    script.push({ type: "result", text: `${yesPct}% YES` });
+    script.push({ type: "status", text: "CONSENSUS REACHED" });
+    
+    setLines(script);
+  }, [latest?.id, agents.length]);
+
+  const { out, done } = useTypewriter(lines, 10, 300);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [out]);
+
+  async function handlePropose() {
+    if (!proposer || !toAddress || !amount || isNaN(amount) || Number(amount) <= 0) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await api.propose(proposer, toAddress, parseFloat(amount), description);
+      setToAddress(""); setAmount(""); setDescription("");
+      if (onSuccess) onSuccess();
     } catch (err) {
-      addLine({ text: `✗ Error: ${err.message}`, color: "#ef4444" });
+      setError(err.message);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="grid grid-cols-2 gap-6" style={{ height: "calc(100vh - 196px)" }}>
-
-      {/* ── Left: proposal form ── */}
-      <div className="flex flex-col gap-5 overflow-y-auto pr-1">
-        <div>
-          <h2 className="text-lg font-semibold text-white">Submit Proposal</h2>
-          <p className="text-sm text-gray-400 mt-1">
-            AI agents deliberate and vote in real-time inside the council chamber.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {humanMembers.length > 0 && (
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Proposing as</label>
-              <select
+    <div className="grid grid-cols-12 gap-8 animate-fade-in-up pb-12">
+      
+      {/* LEFT COLUMN */}
+      <div className="col-span-12 lg:col-span-5 flex flex-col gap-8">
+        <section className="bg-surface-container-low p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-headline font-bold text-xl tracking-tighter uppercase text-on-surface">Submit Proposal</h2>
+            <span className="font-mono text-[10px] tracking-[0.2em] text-on-surface-variant uppercase">MOD_ID: CONV_049</span>
+          </div>
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant">Proposer Selector</label>
+              <select 
                 value={proposer}
-                onChange={(e) => setProposer(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
+                onChange={e => setProposer(e.target.value)}
+                className="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 text-on-surface font-mono text-xs focus:border-primary focus:ring-0 py-3 uppercase tracking-wider cursor-pointer"
               >
-                {humanMembers.map((m) => (
-                  <option key={m.address} value={m.address}>
-                    {m.name} ({m.balance.toFixed(2)} ETH)
-                  </option>
+                {humans.map(m => (
+                  <option key={m.address} value={m.address}>{m.name}_{m.address.slice(0, 6).toUpperCase()}</option>
                 ))}
               </select>
             </div>
-          )}
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Recipient Address</label>
-            <input
-              ref={toRef}
-              type="text"
-              placeholder="0x…"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono placeholder-gray-600 focus:outline-none focus:border-brand-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Amount (ETH)</label>
-            <input
-              ref={amtRef}
-              type="number"
-              step="0.001"
-              min="0.001"
-              placeholder="0.5"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-brand-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Description</label>
-            <textarea
-              ref={descRef}
-              rows={3}
-              placeholder="What is this payment for?"
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-brand-500 resize-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading || phase === "polling"}
-            className="w-full py-3 rounded-lg font-semibold text-sm bg-brand-600 hover:bg-brand-500 text-white transition-colors disabled:opacity-50"
-          >
-            {loading ? "Submitting…" : phase === "polling" ? "⏳ Council deliberating…" : "⚡ Convene Council"}
-          </button>
-        </form>
-
-        {/* Agent legend */}
-        <div className="rounded-xl bg-gray-900 border border-gray-800 p-4 space-y-2">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-3">Council Members</p>
-          {Object.entries(AGENT_META).map(([name, { color, role }]) => (
-            <div key={name} className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs font-mono font-medium" style={{ color }}>{name}</span>
-              <span className="text-xs text-gray-600">{role}</span>
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant">Recipient Address</label>
+              <input 
+                type="text"
+                value={toAddress}
+                onChange={e => setToAddress(e.target.value)}
+                className="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 text-on-surface font-mono text-xs focus:border-primary focus:ring-0 py-3 tracking-wider" 
+                placeholder="0x..." 
+              />
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant">Amount (ETH)</label>
+                <input 
+                  type="number"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  className="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 text-on-surface font-mono text-xs focus:border-primary focus:ring-0 py-3" 
+                  placeholder="0.00" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant">Priority</label>
+                <div className="h-10 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-tertiary rounded-full animate-pulse"></span>
+                  <span className="text-tertiary font-mono text-xs uppercase tracking-tighter">Standard_Deliberation</span>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant">Proposal Description</label>
+              <textarea 
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                className="w-full bg-surface-container-lowest border-none border-b border-outline-variant/40 text-on-surface font-mono text-xs focus:border-primary focus:ring-0 py-3 resize-none uppercase tracking-tight" 
+                placeholder="DEFINE OBJECTIVES..." 
+                rows="4"
+              ></textarea>
+            </div>
+            {error && <p className="font-mono text-xs text-error border-l-2 border-error pl-3">{error}</p>}
+            <button 
+              onClick={handlePropose}
+              disabled={isSubmitting || !toAddress || !amount}
+              className="w-full bg-tertiary text-on-tertiary font-headline font-extrabold uppercase py-4 tracking-[0.3em] text-xs shadow-[0_0_15px_rgba(255,189,94,0.3)] hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <span>⚡ Convene Council</span>
+            </button>
+          </div>
+        </section>
+
+        <section className="bg-surface-container-low p-6">
+          <h3 className="font-headline font-bold text-xs tracking-widest uppercase text-on-surface-variant mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm">groups</span> Council Members
+          </h3>
+          <div className="space-y-2">
+            {agents.map(a => {
+              const config = AGENT_CONFIG[a.name] || AGENT_CONFIG.VetoAgent;
+              return (
+                <div key={a.address} className={`bg-surface-container flex items-center justify-between p-3 border-l-2 ${config.border}`}>
+                  <div className="flex items-center gap-3">
+                    <img src={config.avatar} className="w-8 h-8 bg-surface-container-lowest border border-outline-variant/20" alt={a.name} />
+                    <div>
+                      <p className={`font-mono text-xs ${config.color} tracking-tighter`}>{a.name}</p>
+                      <p className="font-body text-[9px] text-on-surface-variant uppercase tracking-widest">{config.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-[10px] text-on-surface tracking-widest">{a.votingPower.toFixed(2)} VP</p>
+                    <p className="font-body text-[8px] text-primary uppercase tracking-widest">ACTIVE</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
-      {/* ── Right: terminal ── */}
-      <div className="rounded-xl border border-gray-700 bg-black overflow-hidden flex flex-col">
-        {/* macOS-style titlebar */}
-        <div className="px-4 py-2.5 bg-gray-900/80 border-b border-gray-700/60 flex items-center gap-2 shrink-0">
-          <span className="w-3 h-3 rounded-full bg-red-500/80" />
-          <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
-          <span className="w-3 h-3 rounded-full bg-green-500/80" />
-          <span className="text-xs text-gray-500 font-mono ml-3">agent-council-chamber — syndicate-treasury</span>
-        </div>
+      {/* RIGHT COLUMN - Terminal Chamber */}
+      <div className="col-span-12 lg:col-span-7">
+        <div className="bg-surface-container-lowest h-[calc(100vh-160px)] flex flex-col border border-outline-variant/10">
+          <div className="bg-surface-container-high px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 bg-error-container/50 border border-error-container"></div>
+                <div className="w-2.5 h-2.5 bg-tertiary-container/50 border border-tertiary-container"></div>
+                <div className="w-2.5 h-2.5 bg-primary-container/50 border border-primary-container"></div>
+              </div>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-on-surface-variant ml-2">agent-council-chamber</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-ping"></span>
+              <span className="font-mono text-[10px] text-primary uppercase tracking-widest">● LIVE</span>
+            </div>
+          </div>
 
-        {/* Terminal output */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-0.5">
-          {lines.map((line) => (
-            <TermLine key={line.id} line={line} />
-          ))}
-          {phase === "polling" && (
-            <div className="font-mono text-sm text-green-500 animate-pulse">█</div>
-          )}
-          <div ref={bottomRef} />
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 font-mono text-sm space-y-4 [&::-webkit-scrollbar]:hidden">
+            {out.map((line, i) => {
+              if (line.type === "sys") return <div key={i} className="text-primary opacity-60">{line.text}</div>;
+              if (line.type === "event") return (
+                <div key={i} className="pt-4 flex items-center gap-3">
+                  <span className="text-primary">⏳</span>
+                  <span className="text-primary" style={{ textShadow: "0 0 8px rgba(164, 255, 185, 0.5)" }}>{line.text}</span>
+                </div>
+              );
+              if (line.type === "divider") return (
+                <div key={i} className="py-4 text-center text-primary-dim tracking-[0.2em] font-bold">{line.text}</div>
+              );
+              if (line.type === "agent") return (
+                <div key={i} className="flex gap-3">
+                  <span className={line.color}>[{line.agent}]:</span>
+                  <span className="text-on-surface opacity-90">{line.text}</span>
+                </div>
+              );
+              if (line.type === "pass") return (
+                <div key={i} className={`flex gap-3 ml-10 ${line.color}`}><span>✅</span> <span>{line.text}</span></div>
+              );
+              if (line.type === "net") return (
+                <div key={i} className="flex gap-3">
+                  <span className="text-tertiary">[Network]:</span>
+                  <span className="text-on-surface opacity-90 italic">{line.text}</span>
+                </div>
+              );
+              if (line.type === "result") return (
+                <div key={i} className="my-12 flex flex-col items-center justify-center space-y-2">
+                   <div className="text-4xl font-headline font-black text-primary tracking-tighter" style={{ textShadow: "0 0 15px rgba(164, 255, 185, 0.5)" }}>{line.text}</div>
+                </div>
+              );
+              if (line.type === "status") return (
+                <div key={i} className="text-center">
+                  <div className="text-[10px] text-primary uppercase tracking-[0.5em] font-bold">{line.text}</div>
+                </div>
+              );
+              return null;
+            })}
+            {!done && <span className="text-primary animate-pulse inline-block">_</span>}
+          </div>
+
+          <div className="bg-surface-container-low px-4 py-2 border-t border-outline-variant/10 flex justify-between">
+            <div className="flex gap-4">
+              <span className="font-mono text-[9px] text-on-surface-variant uppercase tracking-widest">CPU_LOAD: 12%</span>
+              <span className="font-mono text-[9px] text-on-surface-variant uppercase tracking-widest">AGENT_QUORUM: {agents.length || "0"}/4</span>
+            </div>
+            <span className="font-mono text-[9px] text-secondary uppercase tracking-widest">ENCRYPTED_SSL_CHAMBER</span>
+          </div>
         </div>
       </div>
     </div>

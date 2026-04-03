@@ -1,227 +1,201 @@
 import React, { useState } from "react";
-import { api } from "../api.js";
-
-const DEMO_MEMBERS = [
-  { address: "0xAlice", name: "Alice" },
-  { address: "0xBob",   name: "Bob"   },
-  { address: "0xCarol", name: "Carol" },
-];
+import { api } from "../api";
 
 export default function Deposit({ state, onSuccess }) {
-  const [address, setAddress]   = useState(DEMO_MEMBERS[0].address);
-  const [name,    setName]      = useState(DEMO_MEMBERS[0].name);
-  const [amount,  setAmount]    = useState("1.0");
-  const [loading, setLoading]   = useState(false);
-  const [toast,   setToast]     = useState(null);
-  const [custom,  setCustom]    = useState(false);
-  const [mpLoading, setMpLoading] = useState(false);
+  const members = state?.members ?? [];
+  const humans = members.filter(m => !m.isAgent);
+  const totalBalance = state?.totalBalance ?? 0;
 
-  async function handleMoonPay() {
-    setMpLoading(true);
+  const [selectedMember, setSelectedMember] = useState(humans[0]?.address || "");
+  const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleDeposit() {
+    if (!selectedMember || !amount || isNaN(amount) || Number(amount) <= 0) return;
+    setIsSubmitting(true);
+    setError(null);
     try {
-      const res = await fetch("/pool/deposit/moonpay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberName: name || address }),
-      });
-      const data = await res.json();
-      if (data.depositUrl) {
-        window.open(data.depositUrl, "_blank", "noopener");
-      } else {
-        setToast({ ok: false, msg: data.error || "MoonPay link could not be created" });
-        setTimeout(() => setToast(null), 5000);
-      }
+      const member = members.find(m => m.address === selectedMember);
+      await api.deposit(selectedMember, member?.name ?? "Unknown", parseFloat(amount));
+      if (onSuccess) onSuccess();
+      setAmount("");
     } catch (err) {
-      setToast({ ok: false, msg: err.message });
-      setTimeout(() => setToast(null), 5000);
+      setError(err.message);
     } finally {
-      setMpLoading(false);
+      setIsSubmitting(false);
     }
   }
-
-  function selectMember(m) {
-    setAddress(m.address);
-    setName(m.name);
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!address || !amount || Number(amount) <= 0) return;
-    setLoading(true);
-    try {
-      const res = await api.deposit(address, name, Number(amount));
-      setToast({ ok: true, msg: `Deposited ${Number(amount).toFixed(4)} ETH for ${res.member.name}` });
-      onSuccess?.();
-    } catch (err) {
-      setToast({ ok: false, msg: err.message });
-    } finally {
-      setLoading(false);
-      setTimeout(() => setToast(null), 4000);
-    }
-  }
-
-  const existing = state?.members ?? [];
 
   return (
-    <div className="max-w-lg space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-white">Deposit ETH</h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Add ETH to the pool. Your voting power increases proportionally to your share.
-        </p>
-      </div>
+    <div className="space-y-8 animate-fade-in-up pb-12">
+      
+      {/* Page Header */}
+      <section className="space-y-1">
+        <h1 className="font-headline font-extrabold text-4xl tracking-tighter-2 uppercase text-on-surface">
+          Deposit Terminal
+        </h1>
+        <p className="font-label text-[10px] tracking-widest uppercase text-gray-500">Execute sovereign capital injection to syndicate treasury.</p>
+      </section>
 
-      {toast && (
-        <div className={`rounded-lg px-4 py-3 text-sm ${toast.ok ? "bg-green-900/40 border border-green-700/50 text-green-400" : "bg-red-900/40 border border-red-700/50 text-red-400"}`}>
-          {toast.ok ? "✓ " : "⚠ "}{toast.msg}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="rounded-xl bg-gray-900 border border-gray-800 p-5 space-y-4">
-        {/* Quick-select */}
-        <div>
-          <label className="block text-xs text-gray-500 uppercase tracking-wider mb-2">Select Member</label>
-          <div className="flex gap-2 flex-wrap">
-            {DEMO_MEMBERS.map((m) => (
-              <button
-                key={m.address}
-                type="button"
-                onClick={() => { selectMember(m); setCustom(false); }}
-                className={`px-3 py-1.5 rounded-lg text-sm border transition-colors
-                  ${address === m.address && !custom
-                    ? "bg-brand-600 border-brand-500 text-white"
-                    : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
-                  }`}
-              >
-                {m.name}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => { setCustom(true); setAddress(""); setName(""); }}
-              className={`px-3 py-1.5 rounded-lg text-sm border transition-colors
-                ${custom
-                  ? "bg-brand-600 border-brand-500 text-white"
-                  : "bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500"
-                }`}
-            >
-              + Custom
-            </button>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        {/* LEFT — Manual Deposit Form */}
+        <div className="bg-surface-container-low border-l-2 border-primary p-6 flex flex-col gap-6 glow-primary">
+          <div className="flex justify-between items-center border-b border-outline-variant/20 pb-4">
+            <span className="font-mono text-[10px] tracking-widest uppercase text-primary font-bold">Protocol Section: 01</span>
+            <span className="font-mono text-[10px] tracking-widest uppercase text-gray-500">Manual_Deposit_v1.0</span>
           </div>
-        </div>
 
-        {custom && (
-          <>
-            <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">Name</label>
-              <input
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Display name"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">Address</label>
-              <input
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm focus:outline-none focus:border-brand-500"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="0x..."
-              />
-            </div>
-          </>
-        )}
-
-        {!custom && (
-          <div className="rounded-lg bg-gray-800 px-3 py-2.5 text-sm text-gray-300 font-mono">
-            {address}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">Amount (ETH)</label>
-          <div className="flex gap-2">
-            {["0.5", "1.0", "2.0", "5.0"].map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setAmount(v)}
-                className={`flex-1 py-1.5 rounded-lg text-sm border transition-colors
-                  ${amount === v
-                    ? "bg-brand-600 border-brand-500 text-white"
-                    : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
-                  }`}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          <input
-            className="mt-2 w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
-            type="number"
-            step="0.01"
-            min="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="Custom amount"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading || !address || !amount}
-          className="w-full py-2.5 rounded-lg bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold text-sm transition-colors"
-        >
-          {loading ? "Processing…" : "Deposit ETH"}
-        </button>
-      </form>
-
-      {/* MoonPay */}
-      <div className="rounded-xl bg-gray-900 border border-gray-800 p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Fund with MoonPay</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Generate a deposit link — fund the treasury from any chain via MoonPay.
-            </p>
-          </div>
-          <span className="text-xs bg-blue-900/40 border border-blue-700/40 text-blue-400 px-2 py-0.5 rounded-full">
-            Powered by MoonPay
-          </span>
-        </div>
-        <button
-          onClick={handleMoonPay}
-          disabled={mpLoading}
-          className="w-full py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-        >
-          {mpLoading ? (
-            "Creating deposit link…"
-          ) : (
-            <>
-              <span>🌙</span> Fund with MoonPay
-            </>
-          )}
-        </button>
-        <p className="text-xs text-gray-600">
-          Deposits any crypto → auto-converts to ETH → settles to Syndicate treasury on Base.
-        </p>
-      </div>
-
-      {/* Current balances */}
-      {existing.filter((m) => m.balance > 0).length > 0 && (
-        <div className="rounded-xl bg-gray-900 border border-gray-800 p-5">
-          <h3 className="text-sm font-medium text-gray-400 mb-3">Current Balances</h3>
-          <div className="space-y-2">
-            {existing.filter((m) => m.balance > 0).map((m) => (
-              <div key={m.address} className="flex justify-between text-sm">
-                <span className="text-white">{m.name}</span>
-                <span className="text-gray-400">{m.balance.toFixed(4)} ETH <span className="text-gray-600">({m.votingPower.toFixed(1)}%)</span></span>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <label className="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">Select Member Identity</label>
+              <div className="relative">
+                <select 
+                  value={selectedMember}
+                  onChange={e => setSelectedMember(e.target.value)}
+                  className="input-tactical appearance-none pr-8 cursor-pointer"
+                >
+                  {humans.map(m => (
+                    <option key={m.address} value={m.address}>{m.name} ({m.address.slice(0, 6)}...{m.address.slice(-4)})</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-sm">expand_more</span>
               </div>
-            ))}
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">Injection Amount (ETH)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[1.0, 2.5, 5.0].map(val => (
+                  <button 
+                    key={val}
+                    onClick={() => setAmount(String(val))}
+                    className={`py-2 font-mono text-[10px] tracking-widest uppercase border transition-all duration-150 ${amount === String(val) ? "bg-primary text-on-primary border-primary" : "bg-surface-container-highest border-outline-variant/20 hover:bg-primary hover:text-on-primary hover:border-primary"}`}
+                  >
+                    {val.toFixed(2)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">Custom Manual Override</label>
+              <div className="relative">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0" 
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  className="input-tactical text-2xl font-bold font-mono pr-16 placeholder:text-gray-800" 
+                  placeholder="0.00"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono text-sm text-gray-500 uppercase">ETH</span>
+              </div>
+            </div>
+
+            {error && <p className="font-mono text-xs text-error border-l-2 border-error pl-3 mb-4">{error}</p>}
+          </div>
+
+          <button 
+            onClick={handleDeposit}
+            disabled={isSubmitting || !selectedMember || !amount}
+            className="w-full bg-primary text-on-primary py-4 font-headline font-extrabold text-sm tracking-widest uppercase hover:brightness-110 glow-primary transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+          >
+            <span>►</span>
+            <span>{isSubmitting ? "Processing..." : "Deposit ETH"}</span>
+          </button>
+        </div>
+
+        {/* RIGHT — MoonPay */}
+        <div className="bg-surface-container-low border-l-2 border-secondary p-6 flex flex-col justify-between glow-secondary">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center border-b border-outline-variant/20 pb-4">
+              <span className="font-mono text-[10px] tracking-widest uppercase text-secondary font-bold">Protocol Section: 02</span>
+              <span className="font-mono text-[10px] tracking-widest uppercase text-gray-500">Fiat_Onramp_Interface</span>
+            </div>
+
+            <div className="flex flex-col items-center py-8 gap-6">
+              <div className="w-20 h-20 bg-white flex items-center justify-center shadow-glow-secondary">
+                <img 
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQqw1ybsFSdBszLQ56DjKGILVyepgWBICo3uUOO3QUl2wt5Yctn20pe8dX_QXPgX4Ws1UbnqrRBHK2LxztKFLf2YYeOFx972U3KVCUm9SOzVas146Me8YtY8gVWCQCzX6LBm-puiSJgPkRCPTqIOOvrfqtCATYpcXwoGwuDl7ghpUMYGVw-EkmAWl5zAUxizrrotxnrLPdQmXsHWHTt47k6Dp048n18Kb3VUBiR5ATRMI27G6PE5ghBRcq_13ForTMm9paTDt0PnU" 
+                  alt="MoonPay" 
+                  className="w-12 h-12" 
+                />
+              </div>
+              <div className="text-center space-y-2">
+                <h3 className="font-headline font-bold text-xl uppercase text-on-surface">Fund with MoonPay</h3>
+                <p className="font-body text-sm text-on-surface-variant max-w-xs mx-auto italic">
+                  Deposit any crypto → <span className="text-secondary">auto-converts to ETH</span> → Base Sepolia
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-surface-container-highest p-4 border border-outline-variant/20 space-y-2">
+              <div className="flex justify-between font-mono text-[10px] uppercase">
+                <span className="text-gray-500">Network Fee</span>
+                <span className="text-on-surface">~0.0012 ETH</span>
+              </div>
+              <div className="flex justify-between font-mono text-[10px] uppercase">
+                <span className="text-gray-500">Service Fee</span>
+                <span className="text-on-surface">0.00% SYNDICATE_FREE</span>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            className="w-full py-4 mt-6 font-headline font-extrabold text-sm tracking-widest uppercase text-white flex items-center justify-center gap-2 hover:brightness-110 transition-all" 
+            style={{ background: "#7d32ff", boxShadow: "0 0 20px rgba(125,50,255,0.35)" }}
+          >
+            🌙 Fund with MoonPay
+          </button>
+        </div>
+      </div>
+
+      {/* Balances Table */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-headline font-bold text-lg tracking-tighter uppercase flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">account_balance</span>
+            Current Syndicate Balances
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-primary animate-pulse inline-block"></span>
+            <span className="font-mono text-[10px] tracking-widest uppercase text-gray-500">Live_Feed_Enabled</span>
           </div>
         </div>
-      )}
+
+        <div className="bg-surface-container-low border border-outline-variant/10 overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-surface-container font-mono text-[10px] tracking-widest uppercase text-gray-500 border-b border-outline-variant/20">
+                <th className="px-6 py-4">MEMBER_ID</th>
+                <th className="px-6 py-4 font-medium">WALLET_ADDRESS</th>
+                <th className="px-6 py-4 text-right font-medium">BALANCE_ETH</th>
+                <th className="px-6 py-4 text-right font-medium">VOTING_POWER</th>
+                <th className="px-6 py-4 text-center font-medium">STATUS</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono text-sm">
+              {members.map(m => (
+                <tr key={m.address} className="border-b border-outline-variant/10 hover:bg-surface-container-high transition-colors">
+                  <td className="px-6 py-4 text-on-surface">{m.name}</td>
+                  <td className="px-6 py-4 text-gray-500">{m.address.slice(0, 6)}...{m.address.slice(-4)}</td>
+                  <td className="px-6 py-4 text-right font-bold text-primary">{m.balance.toFixed(4)} ETH</td>
+                  <td className="px-6 py-4 text-right text-on-surface">{m.votingPower.toFixed(1)}%</td>
+                  <td className="px-6 py-4 text-center">
+                    {m.balance < 10 
+                      ? <span className="inline-flex items-center text-[10px] px-2 py-0.5 border border-error text-error uppercase font-bold">Idle</span>
+                      : <span className="inline-flex items-center text-[10px] px-2 py-0.5 border border-primary text-primary uppercase font-bold">Active</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

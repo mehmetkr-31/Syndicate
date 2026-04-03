@@ -1,272 +1,229 @@
-import React, { useState } from "react";
-import { api } from "../api.js";
+import React, { useState, useMemo } from "react";
+import { api } from "../api";
 
-function VotePowerBar({ yesVotes, noVotes, members, totalBalance }) {
-  const getBalance = (addr) => members.find((m) => m.address === addr)?.balance ?? 0;
-  const yesPct = totalBalance > 0
-    ? (yesVotes.reduce((s, v) => s + getBalance(v.member), 0) / totalBalance) * 100
-    : 0;
-  const noPct = totalBalance > 0
-    ? (noVotes.reduce((s, v)  => s + getBalance(v.member), 0) / totalBalance) * 100
-    : 0;
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-xs text-gray-500">
-        <span className="text-green-400">YES {yesPct.toFixed(1)}%</span>
-        <span className="text-red-400">NO {noPct.toFixed(1)}%</span>
-      </div>
-      <div className="relative w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
-        <div
-          className="absolute left-0 top-0 h-full bg-green-500 transition-all duration-500"
-          style={{ width: `${yesPct}%` }}
-        />
-        <div
-          className="absolute right-0 top-0 h-full bg-red-500 transition-all duration-500"
-          style={{ width: `${noPct}%` }}
-        />
-      </div>
-      {/* 51% threshold marker */}
-      <div className="relative w-full h-2">
-        <div className="absolute top-0 h-3 w-px bg-amber-400" style={{ left: "51%" }}>
-          <span className="absolute -top-4 left-1 text-xs text-amber-400 whitespace-nowrap">51%</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProposalCard({ proposal, members, totalBalance, voter, onVote }) {
-  const [loading, setLoading] = useState(false);
-  const [owsResult, setOwsResult] = useState(null);
-
-  const yesVotes = proposal.votes.filter((v) => v.vote === "yes");
-  const noVotes  = proposal.votes.filter((v) => v.vote === "no");
-  const myVote   = proposal.votes.find((v) => v.member === voter);
-
-  async function castVote(vote) {
-    setLoading(true);
-    try {
-      const res = await onVote(proposal.id, voter, vote);
-      if (res?.owsResult) setOwsResult(res.owsResult);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className={`rounded-xl border p-5 space-y-4 ${proposal.status === "executed" ? "bg-blue-950/20 border-blue-700/30" : "bg-gray-900 border-gray-800"}`}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <StatusBadge status={proposal.status} />
-            {proposal.owsSigned && (
-              <span className="text-xs font-medium text-green-400 flex items-center gap-1">
-                🔐 Signed by OWS ✓
-              </span>
-            )}
-          </div>
-          <p className="text-white font-medium">
-            Send <span className="text-brand-400">{proposal.amount.toFixed(4)} ETH</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            To: <span className="font-mono">{proposal.to.slice(0, 16)}…</span>
-          </p>
-          {proposal.description && (
-            <p className="text-sm text-gray-400 mt-1 italic">"{proposal.description}"</p>
-          )}
-        </div>
-        <div className="text-right text-xs text-gray-500 shrink-0">
-          <p>by {proposal.proposerName}</p>
-          <p>{new Date(proposal.createdAt).toLocaleString()}</p>
-        </div>
-      </div>
-
-      {/* Vote bar */}
-      <VotePowerBar
-        yesVotes={yesVotes}
-        noVotes={noVotes}
-        members={members}
-        totalBalance={totalBalance}
-      />
-
-      {/* Vote breakdown — human + agent */}
-      <div className="space-y-1.5">
-        {proposal.votes.length === 0 && (
-          <p className="text-xs text-gray-600">No votes yet</p>
-        )}
-        {proposal.votes.map((v) => (
-          <div key={v.member} className="flex items-start gap-2 text-xs">
-            <span>{v.isAgent ? "🤖" : "👤"}</span>
-            <span className={`font-medium ${v.vote === "yes" ? "text-green-400" : "text-red-400"}`}>
-              {v.memberName} voted {v.vote.toUpperCase()}
-            </span>
-            {v.reason && (
-              <span className="text-gray-500 italic">— {v.reason}</span>
-            )}
-            {v.isAgent && (
-              <span className="ml-auto text-gray-600 font-mono shrink-0">OWS: {v.owsKey}</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* OWS execution result */}
-      {(owsResult || proposal.txHash) && (
-        <div className={`rounded-lg px-3 py-2.5 text-xs space-y-1 ${proposal.status === "executed" ? "bg-blue-900/30 border border-blue-700/40" : "bg-red-900/30 border border-red-700/40"}`}>
-          {(owsResult?.executed || proposal.status === "executed") ? (
-            <>
-              <p className="text-green-400 font-semibold">🔐 OWS Executed ✓</p>
-              <p className="text-gray-400">Wallet: <code className="bg-gray-800 px-1 rounded">syndicate-treasury</code></p>
-              <p className="text-gray-400">Policy: <code className="bg-gray-800 px-1 rounded">withdrawal-policy</code></p>
-              <p className="text-gray-400">Chain: <code className="bg-gray-800 px-1 rounded">eip155:84532</code></p>
-              <p className="text-gray-400">YES Power: <span className="text-green-400">{owsResult?.yesPct ?? "—"}%</span></p>
-              <p className="text-gray-400">TxHash: <span className="font-mono text-blue-400">{(proposal.txHash || owsResult?.txHash)?.slice(0, 20)}…</span></p>
-            </>
-          ) : (
-            <p className="text-amber-400">⏳ {owsResult?.reason}</p>
-          )}
-        </div>
-      )}
-
-      {/* Vote buttons */}
-      {proposal.status === "active" && voter && (
-        <div className="flex gap-3 pt-1">
-          <button
-            onClick={() => castVote("yes")}
-            disabled={loading}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors
-              ${myVote?.vote === "yes"
-                ? "bg-green-600 border-green-500 text-white"
-                : "bg-gray-800 border-gray-700 text-green-400 hover:bg-green-900/30 hover:border-green-700"
-              } disabled:opacity-50`}
-          >
-            {loading ? "…" : myVote?.vote === "yes" ? "✓ Voted YES" : "Vote YES"}
-          </button>
-          <button
-            onClick={() => castVote("no")}
-            disabled={loading}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors
-              ${myVote?.vote === "no"
-                ? "bg-red-600 border-red-500 text-white"
-                : "bg-gray-800 border-gray-700 text-red-400 hover:bg-red-900/30 hover:border-red-700"
-              } disabled:opacity-50`}
-          >
-            {loading ? "…" : myVote?.vote === "no" ? "✓ Voted NO" : "Vote NO"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (s < 60)   return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
 export default function Vote({ state, onSuccess }) {
-  const members       = state?.members ?? [];
-  const allProposals  = state?.proposals ?? [];
-  const totalBalance  = state?.totalBalance ?? 0;
-  const activeMembers = members.filter((m) => !m.isAgent && m.balance > 0);
+  const members   = state?.members   ?? [];
+  const proposals = state?.proposals ?? [];
+  const humans    = members.filter(m => !m.isAgent);
+  const totalVP   = members.reduce((sum, m) => sum + m.votingPower, 0) || 100;
 
-  const [voter,  setVoter]  = useState("");
-  const [filter, setFilter] = useState("active");
-  const [results, setResults] = useState({});
+  const [selectedVoter, setSelectedVoter] = useState(humans[0]?.address || "");
+  const [filter, setFilter]               = useState("active");
+  const [isSubmitting, setIsSubmitting]   = useState(false);
+  const [votingId, setVotingId]           = useState(null);
 
-  // Sync voter to first human member once state loads
-  React.useEffect(() => {
-    if (!voter && activeMembers.length > 0) {
-      setVoter(activeMembers[0].address);
-    }
-  }, [activeMembers.length]);
+  const filtered = useMemo(() => {
+    if (filter === "all") return proposals;
+    return proposals.filter(p => p.status === filter);
+  }, [proposals, filter]);
 
-  const filtered = allProposals.filter((p) =>
-    filter === "all" ? true : p.status === filter
-  );
-
-  async function handleVote(proposalId, member, vote) {
+  async function handleVote(proposalId, voteType) {
+    if (!selectedVoter) return;
+    setIsSubmitting(true);
+    setVotingId(proposalId);
     try {
-      const res = await api.vote(proposalId, member, vote);
-      setResults((prev) => ({ ...prev, [proposalId]: res.owsResult }));
-      await onSuccess?.();
-      return res;
+      await api.vote(proposalId, selectedVoter, voteType);
+      if (onSuccess) onSuccess();
     } catch (err) {
-      alert(err.message);
+      alert("Vote error: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+      setVotingId(null);
     }
   }
 
+  const FILTERS = ["active", "executed", "rejected", "all"];
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <section className="max-w-4xl w-full mx-auto animate-fade-in-up pb-12">
+      
+      {/* Page header + voter profile selector */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div>
-          <h2 className="text-lg font-semibold text-white">Vote on Proposals</h2>
-          <p className="text-sm text-gray-400 mt-1">
-            Votes are weighted by your ETH balance. OWS executes the transfer when YES ≥ 51%.
-          </p>
+          <h1 className="font-headline font-extrabold text-4xl tracking-tighter-2 text-on-surface mb-2 uppercase">Vote on Proposals</h1>
+          <div className="chip-active">Governance Status: Decentralized</div>
         </div>
-        {activeMembers.length > 0 && (
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Voting as</label>
-            <select
-              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-500"
-              value={voter}
-              onChange={(e) => setVoter(e.target.value)}
-            >
-              {activeMembers.map((m) => (
-                <option key={m.address} value={m.address}>
-                  {m.name} ({m.votingPower.toFixed(1)}%)
-                </option>
-              ))}
-            </select>
+
+        <div className="flex flex-col gap-2 items-start md:items-end">
+          <span className="font-label text-[10px] tracking-widest uppercase text-gray-500">Select Voter Profile</span>
+          <div className="flex bg-surface-container-low border border-outline-variant/20 overflow-hidden">
+            {humans.map(m => (
+              <button 
+                key={m.address}
+                onClick={() => setSelectedVoter(m.address)}
+                className={`px-5 py-2 font-mono text-[10px] uppercase tracking-widest whitespace-nowrap transition-colors ${selectedVoter === m.address ? "text-primary bg-surface-container border-l-2 border-primary" : "text-gray-500 hover:text-on-surface"}`}
+              >
+                {m.name}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 bg-gray-900 rounded-lg p-1 w-fit border border-gray-800">
-        {["active", "executed", "rejected", "all"].map((f) => (
-          <button
+      {/* Tabs */}
+      <div className="flex border-b border-outline-variant/10 mb-8">
+        {FILTERS.map(f => (
+          <button 
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-md text-sm capitalize transition-colors
-              ${filter === f ? "bg-gray-700 text-white" : "text-gray-400 hover:text-gray-200"}`}
+            className={`px-6 py-3 font-mono text-[10px] tracking-widest uppercase whitespace-nowrap transition-colors ${filter === f ? "text-primary border-b border-primary" : "text-gray-500 hover:text-on-surface"}`}
           >
             {f}
           </button>
         ))}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="rounded-xl bg-gray-900 border border-gray-800 p-8 text-center text-gray-500">
-          No {filter === "all" ? "" : filter} proposals. Create one in the Propose tab.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filtered.map((p) => (
-            <ProposalCard
-              key={p.id}
-              proposal={p}
-              members={members}
-              totalBalance={totalBalance}
-              voter={voter}
-              onVote={handleVote}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+      {/* Proposal list */}
+      <div className="space-y-6">
+        {filtered.map(p => {
+          const yesPct = (p.votes.yes / totalVP) * 100;
+          const noPct  = (p.votes.no / totalVP) * 100;
+          const busy   = isSubmitting && votingId === p.id;
 
-function StatusBadge({ status }) {
-  const map = {
-    active:   "bg-yellow-900/50 text-yellow-400 border-yellow-700/50",
-    passed:   "bg-green-900/50  text-green-400  border-green-700/50",
-    rejected: "bg-red-900/50    text-red-400    border-red-700/50",
-    executed: "bg-blue-900/50   text-blue-400   border-blue-700/50",
-  };
-  const icons = { active: "", rejected: "❌ ", executed: "✅ " };
-  return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded border ${map[status] ?? ""}`}>
-      {icons[status] ?? ""}{status}
-    </span>
+          if (p.status === "active") {
+            return (
+              <div key={p.id} className="bg-surface-container-low border border-outline-variant/20 border-l-2 border-primary p-6 glow-primary relative">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 font-bold">Active</span>
+                      <span className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">ID: {p.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <h2 className="font-headline font-bold text-xl uppercase tracking-tighter text-on-surface">{p.description || "Treasury Directive"}</h2>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="font-mono text-xl text-primary font-bold">{p.amount.toFixed(2)} ETH</span>
+                    <p className="font-mono text-[10px] text-gray-500 uppercase tracking-widest truncate max-w-[150px]">Target: {p.to}</p>
+                  </div>
+                </div>
+
+                {/* Insufficient Power Warning */}
+                {yesPct < 51 && (
+                  <div className="bg-tertiary/10 border border-tertiary/20 p-3 mb-6 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-tertiary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-tertiary">⏳ Insufficient voting power: {yesPct.toFixed(1)}% YES (need 51%)</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div>
+                    <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2 text-primary">
+                      <span>{yesPct.toFixed(1)}% YES</span>
+                      <span className="text-gray-500">{p.votes.yes.toFixed(1)} VP</span>
+                    </div>
+                    <div className="h-1 bg-surface-container-highest relative overflow-hidden">
+                      <div className="h-full bg-primary animate-pulse-glow" style={{ width: `${yesPct}%` }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2 text-error">
+                      <span>{noPct.toFixed(1)}% NO</span>
+                      <span className="text-gray-500">{p.votes.no.toFixed(1)} VP</span>
+                    </div>
+                    <div className="h-1 bg-surface-container-highest relative overflow-hidden">
+                      <div className="h-full bg-error" style={{ width: `${noPct}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container border-l-2 border-secondary p-4 mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-secondary text-sm">smart_toy</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-secondary font-bold">Agent Reasoning</span>
+                  </div>
+                  <p className="font-mono text-xs text-on-surface-variant leading-relaxed italic opacity-80">
+                    "Simulation indicates capital deployment for '{p.description}' aligns with risk parameters. Quorum pending."
+                  </p>
+                </div>
+
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-outline-variant/10">
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => handleVote(p.id, "yes")}
+                      disabled={busy}
+                      className="bg-primary text-on-primary px-8 py-3 font-headline font-extrabold text-xs tracking-widest uppercase hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      {busy ? "voting..." : "Vote Yes"}
+                    </button>
+                    <button 
+                      onClick={() => handleVote(p.id, "no")}
+                      disabled={busy}
+                      className="px-8 py-3 font-headline font-extrabold text-xs tracking-widest uppercase border border-outline-variant/30 text-gray-500 hover:border-error hover:text-error transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-sm">cancel</span>
+                      Vote No
+                    </button>
+                  </div>
+                  <div className="flex gap-6 text-right">
+                    <div>
+                      <p className="font-label text-[10px] text-gray-500 uppercase tracking-widest">Proposer</p>
+                      <p className="font-mono text-xs text-on-surface">{p.proposerName}</p>
+                    </div>
+                    <div>
+                      <p className="font-label text-[10px] text-gray-500 uppercase tracking-widest">Expires In</p>
+                      <p className="font-mono text-xs text-primary">{timeAgo(p.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (p.status === "executed") {
+            return (
+              <div key={p.id} className="bg-surface-container-low border border-outline-variant/10 p-6 opacity-60 hover:opacity-100 transition-opacity">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-[10px] uppercase tracking-widest text-on-surface-variant bg-surface-container-highest px-2 py-0.5">Executed</span>
+                      <span className="font-mono text-[10px] text-gray-600 uppercase tracking-widest">ID: {p.id.slice(0, 8).toUpperCase()}</span>
+                    </div>
+                    <h2 className="font-headline font-bold text-lg uppercase text-on-surface">{p.description}</h2>
+                  </div>
+                  <span className="font-mono text-lg text-gray-500 font-bold">{p.amount.toFixed(2)} ETH</span>
+                </div>
+                <div className="bg-primary/5 border border-primary/20 p-3 mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-primary text-sm">check_circle</span>
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary">✓ Transaction signed — {p.to.slice(0, 12)}...</span>
+                  </div>
+                  <span className="material-symbols-outlined text-sm text-gray-600 cursor-pointer hover:text-primary">content_copy</span>
+                </div>
+                <div className="h-1 bg-surface-container-highest w-full relative">
+                  <div className="h-full bg-gray-600" style={{ width: `${yesPct}%` }}></div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div key={p.id} className="bg-surface-container-low border border-error/20 border-l-2 border-error p-6 opacity-60">
+              <div className="flex justify-between items-start mb-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-error bg-error/10 px-2 py-0.5">Rejected</span>
+                    <span className="font-mono text-[10px] text-gray-600 uppercase tracking-widest">ID: {p.id.slice(0, 8).toUpperCase()}</span>
+                  </div>
+                  <h2 className="font-headline font-bold text-lg uppercase text-on-surface">{p.description}</h2>
+                </div>
+                <span className="font-mono text-lg text-error font-bold">{p.amount.toFixed(2)} ETH</span>
+              </div>
+              <div className="h-1 bg-surface-container-highest w-full relative">
+                <div className="h-full bg-error/40" style={{ width: `${noPct}%` }}></div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

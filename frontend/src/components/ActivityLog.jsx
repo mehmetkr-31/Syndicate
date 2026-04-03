@@ -1,134 +1,163 @@
 import React, { useState } from "react";
 
-function timeAgo(timestamp) {
-  const secs = Math.floor((Date.now() - new Date(timestamp)) / 1000);
-  if (secs < 60) return `${secs}s ago`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return new Date(timestamp).toLocaleDateString();
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (s < 60)    return `${s}s ago`;
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
 }
 
-const TYPE_CONFIG = {
-  deposit: {
-    icon: "💰",
-    color: "text-green-400",
-    bg: "bg-green-900/20 border-green-800/40",
-    label: (e) => `${e.memberName} deposited ${e.amount?.toFixed(4)} ETH`,
-  },
-  propose: {
-    icon: "📋",
-    color: "text-amber-400",
-    bg: "bg-amber-900/20 border-amber-800/40",
-    label: (e) => `${e.memberName} proposed sending ${e.amount?.toFixed(4)} ETH to ${e.to?.slice(0, 12)}…${e.description ? ` — "${e.description}"` : ""}`,
-  },
-  vote: {
-    icon: "🗳",
-    color: e => e.vote === "yes" ? "text-green-400" : "text-red-400",
-    bg: e => e.vote === "yes" ? "bg-green-900/20 border-green-800/40" : "bg-red-900/20 border-red-800/40",
-    label: (e) => `${e.memberName} voted ${e.vote?.toUpperCase()} on proposal ${e.proposalId?.slice(0, 8)}…`,
-  },
-  agent_vote: {
-    icon: "🤖",
-    color: "text-blue-400",
-    bg: "bg-blue-900/20 border-blue-800/40",
-    label: (e) => `🤖 ${e.agent} voted ${e.vote?.toUpperCase()} — ${e.reason}`,
-    extra: (e) => (
-      <span className="text-gray-600 text-xs font-mono">OWS key: {e.owsKey}</span>
-    ),
-  },
-  execute: {
-    icon: "🔐",
-    color: "text-green-300",
-    bg: "bg-green-900/30 border-green-700/60",
-    label: (e) => (
-      <strong className="font-bold">OWS executed transfer of {e.amount?.toFixed(4)} ETH to {e.to?.slice(0, 12)}…</strong>
-    ),
-    extra: (e) => (
-      <div className="flex items-center gap-3 flex-wrap">
-        {e.owsSigned && (
-          <span className="text-green-400 text-xs">Signed by OWS ✓ · {e.txHash?.slice(0, 14)}…</span>
+function formatDate(ts) {
+  return new Date(ts).toISOString().replace("T", " | ").slice(0, 20) + " UTC";
+}
+
+const FILTERS = ["all", "deposits", "proposals", "votes", "executed", "rejected"];
+
+function matchFilter(item, f) {
+  if (f === "all") return true;
+  if (f === "deposits"  && item.type === "deposit") return true;
+  if (f === "proposals" && item.type === "propose") return true;
+  if (f === "votes"     && (item.type === "vote" || item.type === "agent_vote")) return true;
+  if (f === "executed"  && item.type === "execute") return true;
+  if (f === "rejected"  && item.type === "rejected") return true;
+  return false;
+}
+
+export default function ActivityLog({ history = [] }) {
+  const [filter, setFilter] = useState("all");
+  const filtered = history.filter(item => matchFilter(item, filter));
+
+  return (
+    <div className="max-w-4xl mx-auto animate-fade-in-up pb-12">
+      <div className="mb-10">
+        <h1 className="font-headline text-4xl font-extrabold tracking-tighter-2 text-on-surface uppercase">Activity Log</h1>
+        <p className="font-label text-[10px] tracking-widest uppercase text-gray-500 mt-2">Full chronological record of syndicate operations</p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-8 bg-surface-container-low p-1 border-b border-outline-variant/10">
+        {FILTERS.map(f => (
+          <button 
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`px-4 py-2 font-mono text-[10px] uppercase tracking-widest transition-colors ${filter === f ? "bg-primary text-on-primary font-bold" : "text-gray-500 hover:text-white"}`}
+          >
+            {f}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map((item, idx) => {
+          if (item.type === "execute") return (
+            <div key={idx} className="group bg-surface-container-low border-l-2 border-primary p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+              <div className="flex items-start gap-4">
+                <span className="material-symbols-outlined text-primary mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-primary font-bold">OWS EXECUTED</span>
+                    <span className="font-mono text-[8px] uppercase border border-primary/20 bg-primary/10 text-primary px-1.5 py-0.5">Confirmed</span>
+                  </div>
+                  <p className="font-mono text-sm text-gray-400">{item.to} — Automated secure settlement complete.</p>
+                  <div className="flex items-center gap-2 mt-2 px-2 py-1 bg-black/40 border border-outline-variant/20 w-fit text-[10px] font-mono text-gray-500 hover:border-primary hover:text-primary transition-all cursor-pointer">
+                    <span>TX: {item.txHash?.slice(0, 12)}...</span>
+                    <span className="material-symbols-outlined text-[11px]">content_copy</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">{timeAgo(item.timestamp)}</p>
+                <p className="font-mono text-[9px] text-gray-600 mt-0.5">{formatDate(item.timestamp)}</p>
+              </div>
+            </div>
+          );
+
+          if (item.type === "agent_vote") return (
+            <div key={idx} className="group bg-surface-container-low border-l-2 border-secondary p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+              <div className="flex items-start gap-4">
+                <span className="material-symbols-outlined text-secondary mt-0.5">smart_toy</span>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-secondary font-bold">AGENT VOTE</span>
+                    <span className="font-mono text-[8px] uppercase border border-secondary/20 bg-secondary/10 text-secondary px-1.5 py-0.5 font-bold">AUTONOMOUS</span>
+                  </div>
+                  <p className="font-mono text-sm text-gray-400">🤖 <span className="text-white font-bold">{item.agent}</span> voted <span className={item.vote === "yes" ? "text-primary" : "text-error"}>{item.vote.toUpperCase()}</span> — {item.proposalId.slice(0, 8).toUpperCase()}</p>
+                  <div className="mt-2 text-[10px] font-mono text-gray-600 bg-black/40 p-2 border-l border-secondary/30">
+                    OWS KEY: <span className="text-secondary">{item.owsKey}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">{timeAgo(item.timestamp)}</p>
+                <p className="font-mono text-[9px] text-gray-600 mt-0.5">{formatDate(item.timestamp)}</p>
+              </div>
+            </div>
+          );
+
+          if (item.type === "propose") return (
+            <div key={idx} className="group bg-surface-container-low border-l-2 border-tertiary p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+              <div className="flex items-start gap-4">
+                <span className="material-symbols-outlined text-tertiary mt-0.5">description</span>
+                <div>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-tertiary font-bold mb-1 block">NEW PROPOSAL</span>
+                  <p className="font-mono text-sm text-gray-400"><span className="text-white font-bold">{item.memberName}</span> requested {item.amount.toFixed(2)} ETH → {item.to.slice(0, 10)}...</p>
+                  <p className="font-mono text-[10px] text-gray-500 uppercase tracking-widest mt-2">ID: {item.proposalId.slice(0, 8).toUpperCase()}</p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">{timeAgo(item.timestamp)}</p>
+                <p className="font-mono text-[9px] text-gray-600 mt-0.5">{formatDate(item.timestamp)}</p>
+              </div>
+            </div>
+          );
+
+          if (item.type === "deposit") return (
+            <div key={idx} className="group bg-surface-container-low border-l-2 border-primary-dim p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+              <div className="flex items-start gap-4">
+                <span className="material-symbols-outlined text-primary-dim mt-0.5">payments</span>
+                <div>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-primary-dim font-bold mb-1 block">VAULT DEPOSIT</span>
+                  <p className="font-mono text-sm text-gray-400">+ <span className="text-white font-bold">{item.amount.toFixed(2)} ETH</span> from <span className="text-gray-200">{item.memberName}</span></p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">{timeAgo(item.timestamp)}</p>
+                <p className="font-mono text-[9px] text-gray-600 mt-0.5">{formatDate(item.timestamp)}</p>
+              </div>
+            </div>
+          );
+
+          if (item.type === "vote") return (
+            <div key={idx} className="group bg-surface-container-low border-l-2 border-gray-600 p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+              <div className="flex items-start gap-4">
+                <span className="material-symbols-outlined text-gray-500 mt-0.5">person</span>
+                <div>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-gray-400 font-bold mb-1 block">HUMAN VOTE</span>
+                  <p className="font-mono text-sm text-gray-400">👤 <span className="text-white font-bold">{item.memberName}</span> voted <span className={item.vote === "yes" ? "text-primary" : "text-error"}>{item.vote.toUpperCase()}</span> — {item.proposalId.slice(0, 8).toUpperCase()}</p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-gray-400">{timeAgo(item.timestamp)}</p>
+                <p className="font-mono text-[9px] text-gray-600 mt-0.5">{formatDate(item.timestamp)}</p>
+              </div>
+            </div>
+          );
+
+          return null;
+        })}
+
+        {filtered.length === 0 && (
+          <div className="text-center py-20 bg-surface-container-low border border-outline-variant/10 font-mono text-[10px] uppercase tracking-widest text-gray-600">No activity matching filter records found</div>
         )}
-        {e.txHash && (
-          <CopyButton text={e.txHash} label="Copy txHash" />
-        )}
-      </div>
-    ),
-  },
-  rejected: {
-    icon: "❌",
-    color: "text-red-400",
-    bg: "bg-red-900/20 border-red-800/40",
-    label: (e) => `Proposal ${e.proposalId?.slice(0, 8)}… rejected — YES ${e.yesPct ?? "0"}%${e.reason ? ` (${e.reason})` : ""}`,
-  },
-};
-
-function CopyButton({ text, label = "Copy" }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(text).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
-        });
-      }}
-      className="text-xs text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 rounded px-2 py-0.5 transition-colors"
-    >
-      {copied ? "✓ Copied" : label}
-    </button>
-  );
-}
-
-function EventRow({ event }) {
-  const cfg = TYPE_CONFIG[event.type] ?? {
-    icon: "·",
-    color: "text-gray-400",
-    bg: "bg-gray-900 border-gray-800",
-    label: (e) => e.type,
-  };
-
-  const color = typeof cfg.color === "function" ? cfg.color(event) : cfg.color;
-  const bg    = typeof cfg.bg    === "function" ? cfg.bg(event)    : cfg.bg;
-
-  return (
-    <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${bg}`}>
-      <span className="text-lg mt-0.5 shrink-0">{cfg.icon}</span>
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className={`text-sm ${color}`}>{cfg.label(event)}</p>
-        {cfg.extra && cfg.extra(event)}
-      </div>
-      <time className="text-xs text-gray-600 shrink-0 mt-0.5 text-right">
-        {timeAgo(event.timestamp)}
-        <br />
-        <span className="text-gray-700">{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-      </time>
-    </div>
-  );
-}
-
-export default function ActivityLog({ history }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold text-white">Activity Log</h2>
-        <p className="text-sm text-gray-400 mt-1">
-          Full chronological record of all pool events — deposits, proposals, votes, and OWS-signed transfers.
-        </p>
       </div>
 
-      {history.length === 0 ? (
-        <div className="rounded-xl bg-gray-900 border border-gray-800 p-8 text-center text-gray-500">
-          No activity yet. Start by depositing ETH.
-        </div>
-      ) : (
-        <div className="space-y-2 max-h-[600px] overflow-y-auto scrollbar-thin pr-1">
-          {history.map((event) => (
-            <EventRow key={event.id} event={event} />
-          ))}
-        </div>
-      )}
+      <div className="mt-10 flex justify-center">
+        <button className="group px-8 py-4 bg-surface-container-low border border-outline-variant/20 font-mono text-[10px] tracking-widest text-gray-500 hover:text-primary hover:border-primary transition-all flex items-center gap-3 uppercase">
+          <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">&gt;&gt;</span>
+          FETCH_OLDER_RECORDS
+          <span className="text-primary opacity-0 group-hover:opacity-100 transition-opacity">&lt;&lt;</span>
+        </button>
+      </div>
     </div>
   );
 }

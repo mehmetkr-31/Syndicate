@@ -4,13 +4,103 @@
 
 @layer base {
   body {
-    @apply bg-gray-950 text-gray-100 antialiased;
+    @apply bg-background text-on-surface font-body selection:bg-primary selection:text-on-primary overflow-x-hidden min-h-screen;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-container-lowest;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-container-highest transition-colors hover:bg-outline;
   }
 }
 
-@layer utilities {
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: #374151 transparent;
+@layer components {
+  .scanline-overlay {
+    @apply fixed inset-0 pointer-events-none opacity-[0.04];
+    z-index: 100;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+    background-size: 100% 2px, 3px 100%;
   }
+
+  .grid-pattern {
+    background-image: linear-gradient(to right, #1a1919 1px, transparent 1px), 
+                      linear-gradient(to bottom, #1a1919 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  }
+
+  /* Custom Glows */
+  .glow-primary {
+    box-shadow: 0 0 15px rgba(164, 255, 185, 0.15);
+  }
+  .glow-secondary {
+    box-shadow: 0 0 15px rgba(0, 169, 253, 0.15);
+  }
+  .glow-tertiary {
+    box-shadow: 0 0 15px rgba(255, 189, 94, 0.15);
+  }
+  .glow-error {
+    box-shadow: 0 0 15px rgba(255, 113, 108, 0.15);
+  }
+
+  /* Utility Chips */
+  .chip-active {
+    @apply font-mono text-[8px] uppercase tracking-widest text-primary border border-primary/20 bg-primary/10 px-2 py-0.5 inline-flex items-center gap-1;
+  }
+  .chip-idle {
+    @apply font-mono text-[8px] uppercase tracking-widest text-error border border-error/20 bg-error/10 px-2 py-0.5 inline-flex items-center gap-1;
+  }
+
+  /* Tactical Inputs */
+  .input-tactical {
+    @apply w-full bg-surface-container-lowest border-0 border-b border-outline-variant/40 
+           focus:border-primary focus:ring-0 text-on-surface font-body text-sm py-3 
+           transition-all placeholder:text-gray-700;
+  }
+
+  /* Navigation Item Styles */
+  .nav-item-active {
+    @apply flex items-center px-6 py-3 border-l-2 border-primary bg-surface-container text-primary 
+           font-mono uppercase text-xs tracking-widest brightness-125 transition-all duration-150;
+  }
+  .nav-item-idle {
+    @apply flex items-center px-6 py-3 text-gray-500 font-mono uppercase text-xs tracking-widest 
+           hover:bg-surface-container-low hover:text-primary transition-all duration-150 opacity-80;
+  }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out forwards;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 2px rgba(164,255,185,0.2)); }
+  50%      { filter: brightness(1.2) drop-shadow(0 0 8px rgba(164,255,185,0.6)); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite;
 }

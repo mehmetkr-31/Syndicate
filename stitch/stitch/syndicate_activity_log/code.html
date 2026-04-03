@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SYNDICATE | ACTIVITY LOG</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary": "#006532",
+                    "background": "#0e0e0e",
+                    "on-secondary-fixed": "#003757",
+                    "secondary-fixed": "#abd6ff",
+                    "on-error-container": "#ffa8a3",
+                    "surface-container-high": "#201f1f",
+                    "error": "#ff716c",
+                    "outline-variant": "#494847",
+                    "tertiary-fixed": "#ffaa00",
+                    "inverse-surface": "#fcf8f8",
+                    "on-background": "#ffffff",
+                    "tertiary-dim": "#ed9d00",
+                    "tertiary": "#ffbd5e",
+                    "surface-bright": "#2c2c2c",
+                    "surface-variant": "#262626",
+                    "on-secondary-container": "#f4f8ff",
+                    "on-primary-container": "#005b2c",
+                    "primary-fixed": "#00fd87",
+                    "on-secondary-fixed-variant": "#005583",
+                    "surface": "#0e0e0e",
+                    "primary-dim": "#00ed7e",
+                    "error-container": "#9f0519",
+                    "surface-tint": "#a4ffb9",
+                    "on-tertiary-fixed-variant": "#5c3a00",
+                    "secondary-container": "#006398",
+                    "on-surface-variant": "#adaaaa",
+                    "inverse-on-surface": "#565554",
+                    "tertiary-container": "#ffaa00",
+                    "surface-container-lowest": "#000000",
+                    "on-tertiary-container": "#503200",
+                    "secondary": "#00a9fd",
+                    "surface-dim": "#0e0e0e",
+                    "on-tertiary-fixed": "#331f00",
+                    "inverse-primary": "#006e37",
+                    "surface-container-highest": "#262626",
+                    "tertiary-fixed-dim": "#ed9d00",
+                    "primary-container": "#00fd87",
+                    "surface-container": "#1a1919",
+                    "primary-fixed-dim": "#00ed7e",
+                    "outline": "#777575",
+                    "error-dim": "#d7383b",
+                    "on-tertiary": "#5c3b00",
+                    "primary": "#a4ffb9",
+                    "on-primary-fixed": "#004621",
+                    "on-primary-fixed-variant": "#006632",
+                    "secondary-fixed-dim": "#8dcaff",
+                    "on-error": "#490006",
+                    "surface-container-low": "#131313",
+                    "secondary-dim": "#00a6f9",
+                    "on-secondary": "#00253c",
+                    "on-surface": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0px",
+                    "lg": "0px",
+                    "xl": "0px",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Space Grotesk"],
+                    "label": ["Space Grotesk"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .scanline-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+        .glow-mint { box-shadow: 0 0 15px rgba(164, 255, 185, 0.2); }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-black">
+<div class="scanline-overlay"></div>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] border-none bg-black flex flex-col h-full py-6 px-0 z-50">
+<div class="px-6 mb-12">
+<h1 class="text-[#a4ffb9] font-mono text-xl drop-shadow-[0_0_8px_rgba(164,255,185,0.5)] font-bold tracking-tighter">⬡ SYNDICATE</h1>
+<p class="font-label uppercase text-[10px] tracking-widest text-gray-500 mt-1">SOVEREIGN TERMINAL</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="group flex items-center px-6 py-3 text-gray-500 font-mono hover:bg-[#201f1f] hover:text-[#a4ffb9] transition-all duration-150 opacity-80" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">dashboard</span>
+<span class="font-label uppercase text-xs tracking-widest">Dashboard</span>
+</a>
+<a class="group flex items-center px-6 py-3 text-gray-500 font-mono hover:bg-[#201f1f] hover:text-[#a4ffb9] transition-all duration-150 opacity-80" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">account_balance_wallet</span>
+<span class="font-label uppercase text-xs tracking-widest">Deposit</span>
+</a>
+<a class="group flex items-center px-6 py-3 text-gray-500 font-mono hover:bg-[#201f1f] hover:text-[#a4ffb9] transition-all duration-150 opacity-80" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">add_box</span>
+<span class="font-label uppercase text-xs tracking-widest">Propose</span>
+</a>
+<a class="group flex items-center px-6 py-3 text-gray-500 font-mono hover:bg-[#201f1f] hover:text-[#a4ffb9] transition-all duration-150 opacity-80" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">how_to_vote</span>
+<span class="font-label uppercase text-xs tracking-widest">Vote</span>
+</a>
+<!-- Active Tab: Activity -->
+<a class="group flex items-center px-6 py-3 border-l-2 border-[#a4ffb9] bg-[#1a1919] text-[#a4ffb9] font-mono brightness-125 glow-sm transition-all duration-150" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">history</span>
+<span class="font-label uppercase text-xs tracking-widest">Activity</span>
+</a>
+<a class="group flex items-center px-6 py-3 text-gray-500 font-mono hover:bg-[#201f1f] hover:text-[#a4ffb9] transition-all duration-150 opacity-80" href="#">
+<span class="material-symbols-outlined mr-4 text-lg">groups</span>
+<span class="font-label uppercase text-xs tracking-widest">Council</span>
+</a>
+</nav>
+<div class="px-6 pt-6 mt-auto">
+<button class="w-full py-2 border border-outline-variant/30 text-gray-400 font-label uppercase text-[10px] tracking-widest hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center gap-2">
+<span>⟳</span> Reset
+            </button>
+<div class="mt-6 py-3 border-t border-outline-variant/10 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-sm">lock_open</span>
+<span class="font-label uppercase text-[10px] tracking-widest text-primary">🔓 OWS Connected</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] min-h-screen bg-[#0e0e0e]">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center w-full pl-8 pr-8 h-12 bg-transparent backdrop-blur-md sticky top-0 z-40 border-b border-outline-variant/20">
+<div class="flex items-center gap-8">
+<span class="font-label uppercase text-[10px] tracking-widest text-secondary font-bold">SYNDICATE OPS</span>
+<div class="flex gap-4">
+<span class="font-label uppercase text-[10px] tracking-widest text-[#a4ffb9] border-b border-[#a4ffb9] cursor-default">TX_LOG</span>
+<span class="font-label uppercase text-[10px] tracking-widest text-gray-400 cursor-default">GAS: 12 GWEI</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined text-gray-400 text-sm absolute left-2 top-1/2 -translate-y-1/2">search</span>
+<input class="bg-surface-container-lowest border-none border-b border-outline-variant/20 text-[10px] font-label tracking-widest w-48 pl-8 focus:ring-0 focus:border-primary" placeholder="SEARCH LOGS..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-secondary text-lg">terminal</span>
+<span class="material-symbols-outlined text-gray-400 cursor-pointer hover:text-secondary text-lg">settings</span>
+</div>
+</div>
+</header>
+<!-- Activity Log Content -->
+<div class="p-8 max-w-6xl mx-auto">
+<div class="mb-10">
+<h2 class="font-headline text-4xl font-extrabold tracking-tighter text-on-background">Activity Log</h2>
+<p class="font-label uppercase text-xs tracking-widest text-gray-500 mt-2">Full chronological record of syndicate operations</p>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap gap-2 mb-8 bg-surface-container-low p-1 border-b border-outline-variant/10">
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest bg-primary text-on-primary font-bold">All</button>
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest text-gray-500 hover:text-white transition-colors">Deposits</button>
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest text-gray-500 hover:text-white transition-colors">Proposals</button>
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest text-gray-500 hover:text-white transition-colors">Votes</button>
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest text-gray-500 hover:text-white transition-colors">Executed</button>
+<button class="px-4 py-2 font-label uppercase text-[10px] tracking-widest text-gray-500 hover:text-white transition-colors">Rejected</button>
+</div>
+<!-- Timeline Entries -->
+<div class="space-y-4">
+<!-- Event: OWS Executed -->
+<div class="group bg-surface-container-low border-l-2 border-primary p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors relative">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-primary">OWS EXECUTED</h3>
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[8px] font-bold border border-primary/20">CONFIRMED</span>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">0x4a92...3f1e — Automated secure settlement complete.</p>
+<div class="flex items-center gap-4 mt-3">
+<div class="flex items-center gap-2 px-2 py-1 bg-black/40 text-[10px] font-mono text-gray-500 border border-outline-variant/20 cursor-pointer hover:border-primary hover:text-primary transition-all">
+<span>TX: 0x98f...d21</span>
+<span class="material-symbols-outlined text-[12px]">content_copy</span>
+</div>
+</div>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">2 minutes ago</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 24 2023 | 14:22:04 UTC</p>
+</div>
+</div>
+<!-- Event: Agent Vote -->
+<div class="group bg-surface-container-low border-l-2 border-secondary p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary">smart_toy</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-secondary">AGENT VOTE</h3>
+<span class="px-2 py-0.5 bg-secondary/10 text-secondary text-[8px] font-bold border border-secondary/20">AUTONOMOUS</span>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">🤖 <span class="text-white">Sentinel-Alpha</span> voted <span class="text-secondary font-bold">YES</span> on Proposal #842</p>
+<div class="mt-2 text-[10px] font-mono text-gray-500 bg-surface-container-lowest p-2 border-l border-secondary/40">
+                                OWS KEY: <span class="text-secondary-fixed">ED25519_SYND_8291_AGENT_01</span>
+</div>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">14 minutes ago</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 24 2023 | 14:10:11 UTC</p>
+</div>
+</div>
+<!-- Event: Proposal -->
+<div class="group bg-surface-container-low border-l-2 border-tertiary p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-tertiary">description</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-tertiary">NEW PROPOSAL</h3>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">Allocation for Liquidity Provisioning: Module 4</p>
+<p class="text-[10px] text-gray-500 mt-2 uppercase tracking-widest font-label font-bold">ID: 843 | QUORUM: 66%</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">1 hour ago</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 24 2023 | 13:20:45 UTC</p>
+</div>
+</div>
+<!-- Event: Deposit -->
+<div class="group bg-surface-container-low border-l-2 border-secondary-fixed p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-secondary-fixed">payments</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-secondary-fixed">VAULT DEPOSIT</h3>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">+ <span class="text-white font-bold">45,000.00 USDC</span> from <span class="text-gray-200">0x882...a11</span></p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">3 hours ago</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 24 2023 | 11:12:00 UTC</p>
+</div>
+</div>
+<!-- Event: Human Vote -->
+<div class="group bg-surface-container-low border-l-2 border-gray-500 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-gray-400">person</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-gray-400">HUMAN VOTE</h3>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">👤 <span class="text-white">Council_Member_04</span> voted <span class="text-error-dim font-bold">NO</span> on Proposal #842</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">5 hours ago</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 24 2023 | 09:05:33 UTC</p>
+</div>
+</div>
+<!-- Event: Rejected -->
+<div class="group bg-surface-container-low border-l-2 border-error p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-surface-container transition-colors">
+<div class="flex items-start gap-4">
+<div class="mt-1">
+<span class="material-symbols-outlined text-error">cancel</span>
+</div>
+<div>
+<div class="flex items-center gap-3">
+<h3 class="font-label uppercase text-xs font-bold tracking-widest text-error">PROPOSAL REJECTED</h3>
+<span class="px-2 py-0.5 bg-error/10 text-error text-[8px] font-bold border border-error/20">TERMINATED</span>
+</div>
+<p class="text-sm text-gray-400 mt-1 font-mono">Proposal #841 — Treasury diversification to SOL failed to meet quorum.</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<p class="font-label uppercase text-[10px] font-bold text-gray-300">Yesterday</p>
+<p class="font-mono text-[9px] text-gray-500 tracking-tighter mt-1">OCT 23 2023 | 18:45:12 UTC</p>
+</div>
+</div>
+</div>
+<!-- Load More Terminal UI -->
+<div class="mt-12 flex justify-center">
+<button class="group px-8 py-4 bg-surface-container-low border border-outline-variant/20 font-label uppercase text-xs tracking-[0.2em] text-gray-400 hover:text-primary hover:border-primary/40 hover:glow-mint transition-all flex items-center gap-3">
+<span class="text-primary opacity-0 group-hover:opacity-100 transition-opacity">&gt;&gt;</span>
+                    FETCH_OLDER_RECORDS
+                    <span class="text-primary opacity-0 group-hover:opacity-100 transition-opacity">&lt;&lt;</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Footer Gas Ticker -->
+<footer class="fixed bottom-0 left-[240px] right-0 h-8 bg-black border-t border-outline-variant/10 flex items-center px-6 overflow-hidden z-40">
+<div class="flex items-center gap-8 whitespace-nowrap animate-pulse">
+<span class="text-[9px] font-mono text-primary flex items-center gap-2">
+<span class="w-1 h-1 bg-primary rounded-full"></span> SYSTEM_STATUS: NOMINAL
+            </span>
+<span class="text-[9px] font-mono text-gray-500">NETWORK_LOAD: 42%</span>
+<span class="text-[9px] font-mono text-gray-500">LATEST_BLOCK: 18,422,901</span>
+<span class="text-[9px] font-mono text-secondary">ACTIVE_SESSIONS: 1,024</span>
+<span class="text-[9px] font-mono text-tertiary">PENDING_TX: 12</span>
+<span class="text-[9px] font-mono text-gray-500 uppercase tracking-widest ml-auto">End of Transmission</span>
+</div>
+</footer>
+</body></html>
