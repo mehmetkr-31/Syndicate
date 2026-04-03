@@ -5,6 +5,7 @@ import Deposit from "./components/Deposit.jsx";
 import ProposeWithdrawal from "./components/ProposeWithdrawal.jsx";
 import Vote from "./components/Vote.jsx";
 import ActivityLog from "./components/ActivityLog.jsx";
+import Council from "./components/Council.jsx";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard",  icon: "🏛" },
@@ -12,6 +13,7 @@ const TABS = [
   { id: "propose",   label: "Propose",    icon: "📋" },
   { id: "vote",      label: "Vote",       icon: "🗳" },
   { id: "log",       label: "Activity",   icon: "📜" },
+  { id: "council",   label: "Council",    icon: "🤖" },
 ];
 
 export default function App() {
@@ -127,6 +129,7 @@ export default function App() {
             {tab === "propose"   && <ProposeWithdrawal state={state} onSuccess={() => { refresh(); setTab("vote"); }} />}
             {tab === "vote"      && <Vote      state={state} onSuccess={refresh} />}
             {tab === "log"       && <ActivityLog history={history} />}
+            {tab === "council"   && <Council state={state} onSuccess={refresh} />}
           </>
         )}
       </main>
