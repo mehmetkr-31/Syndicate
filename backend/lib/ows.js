@@ -1,19 +1,21 @@
 /**
  * OWS (Open Wallet Standard) integration layer.
  *
- * In production this would call the actual OWS CLI / SDK:
- *   ows wallet create --name syndicate-treasury
- *   ows key create --name syndicate-agent --wallet syndicate-treasury --policy withdrawal-policy
+ * When TREASURY_PRIVATE_KEY is set in env, executes real Base Sepolia transactions
+ * using the treasury wallet.  Falls back to simulated signing for demo mode.
  *
- * For the hackathon demo we simulate OWS signing so the UI flow is fully
- * demonstrable without a live OWS daemon.  The policy evaluation logic is
- * identical to what the real withdrawal-policy executable would run.
+ * Treasury wallet: 0x2715A10a1c79C83E2dAC70C5124CAC532409A3Cc
+ * Chain: Base Sepolia (eip155:84532)
  */
 
+import { ethers } from "ethers";
 import { store } from "./store.js";
 
-// Simulated OWS wallet address (would come from `ows wallet show syndicate-treasury`)
-export const TREASURY_ADDRESS = "0xSYNDICATE_TREASURY_0000000000000000000000";
+export const TREASURY_ADDRESS =
+  process.env.TREASURY_ADDRESS || "0x2715A10a1c79C83E2dAC70C5124CAC532409A3Cc";
+
+const BASE_SEPOLIA_RPC =
+  process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org";
 
 // OWS policy evaluation — mirrors policies/withdrawal-policy.js exactly
 function evaluatePolicy(proposal) {
@@ -41,7 +43,8 @@ function evaluatePolicy(proposal) {
 
 /**
  * Attempt an OWS-gated transfer.
- * Returns { success, txHash, owsSigned, reason? }
+ * If TREASURY_PRIVATE_KEY is set → real Base Sepolia tx.
+ * Otherwise → simulated signing (demo mode).
  */
 export async function owsTransfer(proposal) {
   const policy = evaluatePolicy(proposal);
@@ -50,16 +53,45 @@ export async function owsTransfer(proposal) {
     return { success: false, owsSigned: false, reason: policy.reason };
   }
 
-  // Simulate signing delay (OWS daemon round-trip)
-  await new Promise((r) => setTimeout(r, 400));
+  const privateKey = process.env.TREASURY_PRIVATE_KEY;
 
-  // In production:
-  //   const result = await fetch("http://localhost:4040/v1/sign", {
-  //     method: "POST",
-  //     headers: { Authorization: `Bearer ${OWS_API_KEY}` },
-  //     body: JSON.stringify({ to: proposal.to, value: proposal.amount, chainId: "eip155:84532" }),
-  //   });
-  //   const { txHash } = await result.json();
+  if (privateKey) {
+    // ── Real on-chain transfer ────────────────────────────────────────────────
+    try {
+      const provider = new ethers.JsonRpcProvider(BASE_SEPOLIA_RPC);
+      const wallet = new ethers.Wallet(privateKey, provider);
+
+      const tx = await wallet.sendTransaction({
+        to: proposal.to,
+        value: ethers.parseEther(proposal.amount.toString()),
+      });
+
+      console.log(`[OWS] Broadcasting tx ${tx.hash} on Base Sepolia…`);
+      const receipt = await tx.wait(1);
+      console.log(`[OWS] Confirmed in block ${receipt.blockNumber}`);
+
+      return {
+        success: true,
+        owsSigned: true,
+        txHash: tx.hash,
+        yesPct: policy.yesPct,
+        wallet: "syndicate-treasury",
+        chain: "eip155:84532",
+        policy: "withdrawal-policy",
+        real: true,
+      };
+    } catch (err) {
+      console.error("[OWS] Real tx failed:", err.message);
+      return {
+        success: false,
+        owsSigned: false,
+        reason: `On-chain tx failed: ${err.message}`,
+      };
+    }
+  }
+
+  // ── Simulated signing (demo / no private key) ─────────────────────────────
+  await new Promise((r) => setTimeout(r, 400));
 
   const txHash =
     "0x" +
@@ -75,5 +107,6 @@ export async function owsTransfer(proposal) {
     wallet: "syndicate-treasury",
     chain: "eip155:84532",
     policy: "withdrawal-policy",
+    real: false,
   };
 }

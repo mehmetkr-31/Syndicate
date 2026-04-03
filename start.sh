@@ -6,9 +6,11 @@ echo ""
 
 # Backend
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BACKEND_PORT=${PORT:-3001}
+BACKEND_PORT=${PORT:-3010}
 echo "→ Starting backend on http://localhost:$BACKEND_PORT"
-(cd "$SCRIPT_DIR/backend" && PORT=$BACKEND_PORT node server.js) &
+ENV_FLAG=""
+[ -f "$SCRIPT_DIR/backend/.env" ] && ENV_FLAG="--env-file=.env"
+(cd "$SCRIPT_DIR/backend" && PORT=$BACKEND_PORT node $ENV_FLAG server.js) &
 BACKEND_PID=$!
 
 # Give backend a moment
