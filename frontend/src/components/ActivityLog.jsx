@@ -19,6 +19,15 @@ const TYPE_CONFIG = {
     bg: e => e.vote === "yes" ? "bg-green-900/20 border-green-800/40" : "bg-red-900/20 border-red-800/40",
     label: (e) => `${e.memberName} voted ${e.vote?.toUpperCase()} on proposal ${e.proposalId?.slice(0, 8)}…`,
   },
+  agent_vote: {
+    icon: "🤖",
+    color: e => e.vote === "yes" ? "text-green-400" : "text-red-400",
+    bg: e => e.vote === "yes" ? "bg-green-900/20 border-green-800/40" : "bg-red-900/20 border-red-800/40",
+    label: (e) => `🤖 ${e.agent} voted ${e.vote?.toUpperCase()} — ${e.reason}`,
+    extra: (e) => (
+      <span className="text-gray-600 text-xs font-mono">OWS key: {e.owsKey}</span>
+    ),
+  },
   execute: {
     icon: "🔐",
     color: "text-blue-400",

@@ -91,11 +91,25 @@ function ProposalCard({ proposal, members, totalBalance, voter, onVote }) {
         totalBalance={totalBalance}
       />
 
-      {/* Vote counts */}
-      <div className="flex gap-3 text-xs text-gray-500">
-        <span className="text-green-400">{yesVotes.length} YES {yesVotes.length > 0 && `(${yesVotes.map(v => v.memberName).join(", ")})`}</span>
-        <span>·</span>
-        <span className="text-red-400">{noVotes.length} NO {noVotes.length > 0 && `(${noVotes.map(v => v.memberName).join(", ")})`}</span>
+      {/* Vote breakdown — human + agent */}
+      <div className="space-y-1.5">
+        {proposal.votes.length === 0 && (
+          <p className="text-xs text-gray-600">No votes yet</p>
+        )}
+        {proposal.votes.map((v) => (
+          <div key={v.member} className="flex items-start gap-2 text-xs">
+            <span>{v.isAgent ? "🤖" : "👤"}</span>
+            <span className={`font-medium ${v.vote === "yes" ? "text-green-400" : "text-red-400"}`}>
+              {v.memberName} voted {v.vote.toUpperCase()}
+            </span>
+            {v.reason && (
+              <span className="text-gray-500 italic">— {v.reason}</span>
+            )}
+            {v.isAgent && (
+              <span className="ml-auto text-gray-600 font-mono shrink-0">OWS: {v.owsKey}</span>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* OWS execution result */}

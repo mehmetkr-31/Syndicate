@@ -4,6 +4,7 @@ import { execFile } from "child_process";
 import { promisify } from "util";
 import { store, recalcVotingPower, addEvent } from "../lib/store.js";
 import { owsTransfer, TREASURY_ADDRESS } from "../lib/ows.js";
+import { triggerAgentVotes } from "../agents/index.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -98,6 +99,9 @@ router.post("/propose", (req, res) => {
     amount: proposal.amount,
     description: proposal.description,
   });
+
+  // Autonomous agents vote asynchronously (1–3 s delay each)
+  triggerAgentVotes(proposal);
 
   res.json({ success: true, proposal });
 });

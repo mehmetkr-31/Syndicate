@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import poolRouter from "./routes/pool.js";
 import { seedDemo } from "./lib/store.js";
+import { registerAgents } from "./agents/index.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,8 @@ app.get("/health", (_, res) => res.json({ ok: true, service: "syndicate-backend"
 
 // Seed demo members so the UI starts with something interesting
 seedDemo();
+// Register autonomous voting agents
+registerAgents();
 
 app.listen(PORT, () => {
   console.log(`\n🏛  Syndicate backend running on http://localhost:${PORT}`);
