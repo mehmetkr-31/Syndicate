@@ -3,15 +3,25 @@
  * without going through HTTP — avoids circular dependency with routes/pool.js.
  */
 
-import { store, recalcVotingPower, addEvent } from "../lib/store.js";
+import { store, recalcVotingPower, addEvent, checkAndReject } from "../lib/store.js";
 import { owsTransfer } from "../lib/ows.js";
+
+const executing = new Set();
 
 export const api = {
   async checkAndExecute(proposal) {
     if (proposal.status !== "active") return;
+    if (executing.has(proposal.id)) return;
+    executing.add(proposal.id);
 
+    try {
     recalcVotingPower();
     const result = await owsTransfer(proposal);
+
+    if (!result.success) {
+      checkAndReject(proposal);
+      return;
+    }
 
     if (result.success) {
       proposal.status = "executed";
@@ -38,6 +48,9 @@ export const api = {
         yesPct: result.yesPct,
         triggeredByAgent: true,
       });
+    }
+    } finally {
+      executing.delete(proposal.id);
     }
   },
 };

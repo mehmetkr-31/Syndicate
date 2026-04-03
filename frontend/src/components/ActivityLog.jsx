@@ -1,4 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
+
+function timeAgo(timestamp) {
+  const secs = Math.floor((Date.now() - new Date(timestamp)) / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
 
 const TYPE_CONFIG = {
   deposit: {
@@ -21,8 +31,8 @@ const TYPE_CONFIG = {
   },
   agent_vote: {
     icon: "🤖",
-    color: e => e.vote === "yes" ? "text-green-400" : "text-red-400",
-    bg: e => e.vote === "yes" ? "bg-green-900/20 border-green-800/40" : "bg-red-900/20 border-red-800/40",
+    color: "text-blue-400",
+    bg: "bg-blue-900/20 border-blue-800/40",
     label: (e) => `🤖 ${e.agent} voted ${e.vote?.toUpperCase()} — ${e.reason}`,
     extra: (e) => (
       <span className="text-gray-600 text-xs font-mono">OWS key: {e.owsKey}</span>
@@ -30,14 +40,46 @@ const TYPE_CONFIG = {
   },
   execute: {
     icon: "🔐",
-    color: "text-blue-400",
-    bg: "bg-blue-900/20 border-blue-800/40",
-    label: (e) => `OWS executed transfer of ${e.amount?.toFixed(4)} ETH to ${e.to?.slice(0, 12)}…`,
-    extra: (e) => e.owsSigned ? (
-      <span className="text-green-400 text-xs">Signed by OWS ✓ · {e.txHash?.slice(0, 14)}…</span>
-    ) : null,
+    color: "text-green-300",
+    bg: "bg-green-900/30 border-green-700/60",
+    label: (e) => (
+      <strong className="font-bold">OWS executed transfer of {e.amount?.toFixed(4)} ETH to {e.to?.slice(0, 12)}…</strong>
+    ),
+    extra: (e) => (
+      <div className="flex items-center gap-3 flex-wrap">
+        {e.owsSigned && (
+          <span className="text-green-400 text-xs">Signed by OWS ✓ · {e.txHash?.slice(0, 14)}…</span>
+        )}
+        {e.txHash && (
+          <CopyButton text={e.txHash} label="Copy txHash" />
+        )}
+      </div>
+    ),
+  },
+  rejected: {
+    icon: "❌",
+    color: "text-red-400",
+    bg: "bg-red-900/20 border-red-800/40",
+    label: (e) => `Proposal ${e.proposalId?.slice(0, 8)}… rejected — YES ${e.yesPct ?? "0"}%${e.reason ? ` (${e.reason})` : ""}`,
   },
 };
+
+function CopyButton({ text, label = "Copy" }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      className="text-xs text-gray-500 hover:text-gray-300 border border-gray-700 hover:border-gray-500 rounded px-2 py-0.5 transition-colors"
+    >
+      {copied ? "✓ Copied" : label}
+    </button>
+  );
+}
 
 function EventRow({ event }) {
   const cfg = TYPE_CONFIG[event.type] ?? {
@@ -53,14 +95,14 @@ function EventRow({ event }) {
   return (
     <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${bg}`}>
       <span className="text-lg mt-0.5 shrink-0">{cfg.icon}</span>
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 space-y-1">
         <p className={`text-sm ${color}`}>{cfg.label(event)}</p>
         {cfg.extra && cfg.extra(event)}
       </div>
-      <time className="text-xs text-gray-600 shrink-0 mt-0.5">
-        {new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+      <time className="text-xs text-gray-600 shrink-0 mt-0.5 text-right">
+        {timeAgo(event.timestamp)}
         <br />
-        <span className="text-gray-700">{new Date(event.timestamp).toLocaleDateString()}</span>
+        <span className="text-gray-700">{new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
       </time>
     </div>
   );

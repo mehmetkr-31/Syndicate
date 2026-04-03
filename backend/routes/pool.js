@@ -2,7 +2,7 @@ import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { store, recalcVotingPower, addEvent, resetStore } from "../lib/store.js";
+import { store, recalcVotingPower, addEvent, resetStore, checkAndReject } from "../lib/store.js";
 import { owsTransfer, TREASURY_ADDRESS } from "../lib/ows.js";
 import { triggerAgentVotes } from "../agents/index.js";
 
@@ -136,6 +136,7 @@ router.post("/vote", async (req, res) => {
   });
 
   // Check if proposal has reached threshold → attempt OWS execution
+  checkAndReject(proposal);
   const result = await owsTransfer(proposal);
 
   if (result.success) {

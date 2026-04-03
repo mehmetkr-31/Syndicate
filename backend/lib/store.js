@@ -43,6 +43,34 @@ export function recalcVotingPower() {
   }
 }
 
+export function checkAndReject(proposal) {
+  if (proposal.status !== "active") return false;
+
+  recalcVotingPower();
+  const allMembers = Object.values(store.members);
+  const votedAddresses = new Set(proposal.votes.map((v) => v.member));
+  const allVoted = allMembers.every((m) => votedAddresses.has(m.address));
+  if (!allVoted) return false;
+
+  const yesPower = proposal.votes
+    .filter((v) => v.vote === "yes")
+    .reduce((s, v) => s + (store.members[v.member]?.balance ?? 0), 0);
+  const pct = store.totalBalance > 0 ? (yesPower / store.totalBalance) * 100 : 0;
+
+  if (pct < 51) {
+    proposal.status = "rejected";
+    proposal.rejectedAt = new Date().toISOString();
+    addEvent("rejected", {
+      proposalId: proposal.id,
+      amount: proposal.amount,
+      to: proposal.to,
+      yesPct: pct.toFixed(1),
+    });
+    return true;
+  }
+  return false;
+}
+
 export function addEvent(type, data) {
   store.history.unshift({
     id: Date.now().toString(),

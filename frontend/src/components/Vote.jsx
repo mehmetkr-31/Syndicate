@@ -222,7 +222,7 @@ export default function Vote({ state, onSuccess }) {
 
       {/* Filter tabs */}
       <div className="flex gap-1 bg-gray-900 rounded-lg p-1 w-fit border border-gray-800">
-        {["active", "executed", "all"].map((f) => (
+        {["active", "executed", "rejected", "all"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -263,9 +263,10 @@ function StatusBadge({ status }) {
     rejected: "bg-red-900/50    text-red-400    border-red-700/50",
     executed: "bg-blue-900/50   text-blue-400   border-blue-700/50",
   };
+  const icons = { active: "", rejected: "❌ ", executed: "✅ " };
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded border ${map[status] ?? ""}`}>
-      {status}
+      {icons[status] ?? ""}{status}
     </span>
   );
 }
