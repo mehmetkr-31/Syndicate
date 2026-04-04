@@ -3,456 +3,356 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Syndicate — OWS-Native Autonomous Investment DAO</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <title>⬡ SYNDICATE — Autonomous AI Agent Treasury</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#a4ffb9',
+            background: '#0e0e0e',
+          },
+          fontFamily: {
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          animation: {
+            marquee: 'marquee 30s linear infinite',
+            pulse2: 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            fadein: 'fadeIn 0.8s ease forwards',
+          },
+          keyframes: {
+            marquee: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
+            fadeIn: { from: { opacity: 0, transform: 'translateY(16px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+          },
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
+    body { background: #0e0e0e; color: #e8e8e8; font-family: 'JetBrains Mono', monospace; }
 
-    :root {
-      --green:   #00ff88;
-      --green2:  #00cc66;
-      --dim:     #1a1a1a;
-      --panel:   #0d0d0d;
-      --border:  #1f1f1f;
-      --muted:   #555;
-      --text:    #ccc;
-      --yellow:  #f0c040;
-      --purple:  #a855f7;
-      --blue:    #3b82f6;
-      --red:     #ef4444;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: #080808;
-      color: var(--text);
-      font-family: 'JetBrains Mono', 'Courier New', monospace;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-
-    /* ── Scanline overlay ── */
-    body::before {
-      content: '';
+    .scanline {
+      pointer-events: none;
       position: fixed;
       inset: 0;
       background: repeating-linear-gradient(
         0deg,
-        transparent,
-        transparent 2px,
-        rgba(0,255,136,0.015) 2px,
-        rgba(0,255,136,0.015) 4px
+        rgba(0,0,0,0.06) 0px,
+        rgba(0,0,0,0.06) 1px,
+        transparent 1px,
+        transparent 2px
       );
-      pointer-events: none;
-      z-index: 999;
+      z-index: 9999;
     }
 
-    a { color: var(--green); text-decoration: none; }
-    a:hover { text-decoration: underline; }
+    .glow-text { text-shadow: 0 0 20px rgba(164, 255, 185, 0.5); }
+    .glow-border { box-shadow: 0 0 0 1px rgba(164, 255, 185, 0.15), 0 0 20px rgba(164, 255, 185, 0.05); }
+    .glow-btn { box-shadow: 0 0 20px rgba(164, 255, 185, 0.25); }
+    .glow-btn:hover { box-shadow: 0 0 35px rgba(164, 255, 185, 0.45); }
 
-    .container { max-width: 860px; margin: 0 auto; padding: 0 24px; }
-
-    /* ── Nav ── */
-    nav {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 0;
-      position: sticky; top: 0;
-      background: rgba(8,8,8,0.95);
-      backdrop-filter: blur(8px);
-      z-index: 100;
-    }
-    nav .inner {
-      max-width: 860px; margin: 0 auto; padding: 0 24px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .logo { font-size: 1rem; font-weight: 700; color: var(--green); letter-spacing: 0.1em; }
-    .logo span { color: var(--muted); font-weight: 400; }
-    .nav-links { display: flex; gap: 24px; font-size: 0.75rem; color: var(--muted); }
-    .nav-links a { color: var(--muted); transition: color .2s; }
-    .nav-links a:hover { color: var(--green); text-decoration: none; }
-
-    /* ── Hero ── */
-    .hero {
-      padding: 100px 0 80px;
-      text-align: center;
-    }
-    .hero-label {
-      display: inline-block;
-      font-size: 0.7rem;
-      letter-spacing: 0.2em;
-      color: var(--green);
-      border: 1px solid var(--green);
-      border-radius: 2px;
-      padding: 4px 12px;
-      margin-bottom: 32px;
-      text-transform: uppercase;
-    }
-    .hero h1 {
-      font-size: clamp(3rem, 10vw, 6rem);
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: -0.02em;
-      line-height: 1;
-      margin-bottom: 12px;
-      text-shadow: 0 0 60px rgba(0,255,136,0.2);
-    }
-    .hero h1 .cursor {
-      display: inline-block;
-      width: 0.06em;
-      height: 0.85em;
-      background: var(--green);
-      margin-left: 6px;
-      vertical-align: middle;
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-    .hero-sub {
-      font-size: 0.85rem;
-      color: var(--muted);
-      max-width: 520px;
-      margin: 0 auto 40px;
-      line-height: 1.8;
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(164,255,185,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(164,255,185,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
     }
 
-    .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 11px 22px;
-      font-family: inherit; font-size: 0.8rem; font-weight: 500;
-      border-radius: 4px; cursor: pointer;
-      transition: all .2s;
-    }
-    .btn-primary {
-      background: var(--green); color: #000;
-      border: none;
-    }
-    .btn-primary:hover { background: var(--green2); text-decoration: none; }
-    .btn-ghost {
-      background: transparent; color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { border-color: var(--green); color: var(--green); text-decoration: none; }
+    .agent-card { transition: border-color 0.2s, box-shadow 0.2s; }
+    .agent-card:hover { box-shadow: 0 0 24px rgba(164,255,185,0.1); }
 
-    /* ── Live tx badge ── */
-    .tx-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      margin-top: 36px;
-      font-size: 0.7rem;
-      color: var(--green);
-      background: rgba(0,255,136,0.06);
-      border: 1px solid rgba(0,255,136,0.2);
-      border-radius: 4px;
-      padding: 6px 14px;
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .tx-badge .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 6px var(--green);
-      animation: pulse 2s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(0.8)} }
+    .fade-in { animation: fadeInUp 0.7s ease forwards; }
+    .delay-1 { animation-delay: 0.1s; opacity: 0; }
+    .delay-2 { animation-delay: 0.2s; opacity: 0; }
+    .delay-3 { animation-delay: 0.35s; opacity: 0; }
+    .delay-4 { animation-delay: 0.5s; opacity: 0; }
+    .delay-5 { animation-delay: 0.65s; opacity: 0; }
 
-    /* ── Section titles ── */
-    section { padding: 80px 0; border-top: 1px solid var(--border); }
-    .section-label {
-      font-size: 0.65rem; letter-spacing: 0.2em;
-      color: var(--green); text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: 1.4rem; font-weight: 700; color: #fff;
-      margin-bottom: 40px;
-    }
-
-    /* ── Feature cards ── */
-    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    @media(max-width:640px){ .cards { grid-template-columns: 1fr; } }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 28px 24px;
-      transition: border-color .2s;
-    }
-    .card:hover { border-color: var(--green); }
-    .card-icon { font-size: 1.6rem; margin-bottom: 16px; }
-    .card-title { font-size: 0.85rem; font-weight: 700; color: #fff; margin-bottom: 10px; }
-    .card-body { font-size: 0.75rem; color: var(--muted); line-height: 1.7; }
-
-    /* ── Demo flow ── */
-    .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-    @media(max-width:640px){ .flow { grid-template-columns: 1fr; } }
-    .flow-step {
-      position: relative;
-      padding: 28px 24px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-    }
-    .flow-step:not(:last-child)::after {
-      content: '→';
-      position: absolute; right: -14px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--green); font-size: 1.2rem; z-index: 1;
-    }
-    @media(max-width:640px){
-      .flow-step:not(:last-child)::after { content: '↓'; right: auto; left: 50%; top: auto; bottom: -14px; transform: translateX(-50%); }
-    }
-    .flow-step:first-child { border-radius: 8px 0 0 8px; }
-    .flow-step:last-child  { border-radius: 0 8px 8px 0; }
-    @media(max-width:640px){ .flow-step { border-radius: 0; } .flow-step:first-child { border-radius: 8px 8px 0 0; } .flow-step:last-child { border-radius: 0 0 8px 8px; } }
-    .flow-num { font-size: 0.65rem; color: var(--green); margin-bottom: 12px; letter-spacing: 0.1em; }
-    .flow-title { font-size: 0.9rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
-    .flow-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.7; }
-
-    /* ── Agent council ── */
-    .agents { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-    @media(max-width:500px){ .agents { grid-template-columns: 1fr; } }
-    .agent-row {
-      display: flex; align-items: flex-start; gap: 14px;
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: 8px; padding: 18px 20px;
-    }
-    .agent-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-    .agent-name { font-size: 0.78rem; font-weight: 700; margin-bottom: 4px; }
-    .agent-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.6; }
-
-    /* ── Terminal demo ── */
-    .terminal {
-      background: #000;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      overflow: hidden;
-      font-size: 0.75rem;
-    }
-    .terminal-bar {
-      background: #111;
-      border-bottom: 1px solid var(--border);
-      padding: 10px 16px;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .tbar-dot { width: 11px; height: 11px; border-radius: 50%; }
-    .terminal-bar span { font-size: 0.65rem; color: var(--muted); margin-left: 8px; }
-    .terminal-body { padding: 20px 24px; line-height: 2; }
-    .t { display: block; }
-    .t-green  { color: var(--green); }
-    .t-yellow { color: var(--yellow); }
-    .t-red    { color: var(--red); }
-    .t-blue   { color: var(--blue); }
-    .t-purple { color: var(--purple); }
-    .t-dim    { color: var(--muted); }
-    .t-white  { color: #fff; }
-    .t-bold   { font-weight: 700; }
-
-    /* ── Footer ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 32px 0;
-      text-align: center;
-      font-size: 0.7rem;
-      color: var(--muted);
-    }
-    footer a { color: var(--muted); }
-    footer a:hover { color: var(--green); }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+    .cursor { animation: blink 1.1s step-end infinite; }
   </style>
 </head>
-<body>
+<body class="min-h-screen overflow-x-hidden">
+  <div class="scanline"></div>
 
-<!-- Nav -->
-<nav>
-  <div class="inner">
-    <div class="logo">SYNDICATE<span>.dao</span></div>
-    <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#council">Council</a>
-      <a href="#flow">How it works</a>
-      <a href="https://github.com/mehmetkr-31/Syndicate" target="_blank">GitHub ↗</a>
+  <!-- Ticker -->
+  <div class="border-b border-white/5 overflow-hidden py-1.5 bg-black/60">
+    <div class="flex whitespace-nowrap gap-16" style="animation: marquee 28s linear infinite; width: max-content;">
+      <span class="text-[10px] text-primary/50 tracking-widest uppercase flex gap-16">
+        <span>⬡ SYNDICATE PROTOCOL</span>
+        <span>BASE SEPOLIA: eip155:84532</span>
+        <span>OWS POLICY: withdrawal-policy</span>
+        <span>AGENTS ONLINE: 4/4</span>
+        <span>QUORUM THRESHOLD: 51%</span>
+        <span>TX: 0xca880cd4e8239e91...</span>
+        <span>⬡ SYNDICATE PROTOCOL</span>
+        <span>BASE SEPOLIA: eip155:84532</span>
+        <span>OWS POLICY: withdrawal-policy</span>
+        <span>AGENTS ONLINE: 4/4</span>
+        <span>QUORUM THRESHOLD: 51%</span>
+        <span>TX: 0xca880cd4e8239e91...</span>
+      </span>
     </div>
   </div>
-</nav>
 
-<!-- Hero -->
-<section class="hero" style="border:none;padding-top:90px">
-  <div class="container">
-    <div class="hero-label">OWS Hackathon 2026</div>
-    <h1>Syndicate<span class="cursor"></span></h1>
-    <p style="font-size:0.9rem;color:#fff;margin-bottom:12px;font-weight:500;">
-      The First OWS-Native Autonomous Investment DAO
-    </p>
-    <p class="hero-sub">
-      A council of AI agents governs your treasury.<br>
-      No single point of control. No exposed keys.
-    </p>
-    <div class="hero-cta">
-      <a href="https://github.com/mehmetkr-31/Syndicate" target="_blank" class="btn btn-primary">
-        ⚡ View on GitHub
-      </a>
-      <a href="#flow" class="btn btn-ghost">
-        How it works →
-      </a>
-    </div>
-    <div>
-      <div class="tx-badge">
-        <span class="dot"></span>
-        ✓ Live on Base Sepolia —
-        <a href="https://sepolia.basescan.org/tx/0xca880cd4e8239e91aecb537654d49b7b67f14af68c762b5df6a86562986312b9"
-           target="_blank" style="color:var(--green);">
-          0xca880cd4e8239e91…
+  <!-- Hero -->
+  <section class="grid-bg relative min-h-[92vh] flex flex-col items-center justify-center px-6 text-center">
+    <!-- Glow orb -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none" style="background: radial-gradient(circle, rgba(164,255,185,0.06) 0%, transparent 70%);"></div>
+
+    <div class="relative z-10 max-w-3xl mx-auto fade-in delay-1">
+      <div class="inline-flex items-center gap-2 border border-primary/20 px-4 py-1.5 text-[10px] text-primary tracking-[0.3em] uppercase mb-8">
+        <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span>
+        OWS-Native Protocol · Live on Base Sepolia
+      </div>
+
+      <h1 class="text-6xl md:text-8xl font-black tracking-tighter text-primary glow-text mb-4 leading-none">
+        ⬡ SYNDICATE
+      </h1>
+      <p class="text-lg md:text-xl text-white/60 font-mono tracking-tight mb-6 fade-in delay-2">
+        Autonomous AI Agent Treasury
+      </p>
+      <p class="text-sm md:text-base text-white/40 leading-relaxed max-w-xl mx-auto mb-10 fade-in delay-3">
+        The first OWS-native treasury governed by a council of debating AI agents.
+        No trusted third party. No exposed keys. No single point of control.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 fade-in delay-4">
+        <a
+          href="https://github.com/mehmetkr-31/Syndicate"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="glow-btn bg-primary text-black font-bold text-xs tracking-[0.2em] uppercase px-8 py-4 hover:brightness-110 transition-all flex items-center gap-2"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
         </a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Features -->
-<section id="features">
-  <div class="container">
-    <div class="section-label">// core primitives</div>
-    <div class="section-title">Built different.</div>
-    <div class="cards">
-      <div class="card">
-        <div class="card-icon">🏛</div>
-        <div class="card-title">Agent Council</div>
-        <div class="card-body">
-          4 specialized AI agents deliberate every proposal in real-time.
-          Conservative, Risk, Neutral, and Veto — each with a distinct mandate.
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-icon">🔐</div>
-        <div class="card-title">OWS Policy Engine</div>
-        <div class="card-body">
-          Private keys never exposed to application code.
-          The OWS policy contract gates every transaction — 51% YES required to sign.
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-icon">⚖️</div>
-        <div class="card-title">Weighted Voting</div>
-        <div class="card-body">
-          Voting power is proportional to your ETH stake.
-          Deposit more, influence more. Fully transparent on-chain.
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Agent Council -->
-<section id="council">
-  <div class="container">
-    <div class="section-label">// autonomous agents</div>
-    <div class="section-title">Meet the council.</div>
-    <div class="agents">
-      <div class="agent-row">
-        <span class="agent-dot" style="background:#a855f7"></span>
-        <div>
-          <div class="agent-name" style="color:#a855f7">VetoAgent</div>
-          <div class="agent-desc">Security auditor. Hard-vetoes blacklisted recipients instantly.
-          First to vote. One NO ends the proposal.</div>
-        </div>
-      </div>
-      <div class="agent-row">
-        <span class="agent-dot" style="background:#eab308"></span>
-        <div>
-          <div class="agent-name" style="color:#eab308">ConservativeAgent</div>
-          <div class="agent-desc">Financial advisor. Rejects if amount &gt;20% of treasury
-          or if too many transactions occurred in the last 24h.</div>
-        </div>
-      </div>
-      <div class="agent-row">
-        <span class="agent-dot" style="background:#ef4444"></span>
-        <div>
-          <div class="agent-name" style="color:#ef4444">RiskAgent</div>
-          <div class="agent-desc">Growth investor. Always bullish — unless the proposal
-          would drain &gt;80% of the treasury.</div>
-        </div>
-      </div>
-      <div class="agent-row">
-        <span class="agent-dot" style="background:#3b82f6"></span>
-        <div>
-          <div class="agent-name" style="color:#3b82f6">NeutralAgent</div>
-          <div class="agent-desc">Balanced analyst. Approves below 50% threshold.
-          Recognizes repeat recipients as lower risk.</div>
+        <div class="border border-primary/20 px-6 py-4 text-[10px] text-primary/70 tracking-widest uppercase font-mono">
+          <span class="text-primary/40">TX: </span>0xca880cd4e8239e91<span class="cursor">_</span>
         </div>
       </div>
     </div>
 
-    <!-- Terminal demo -->
-    <div class="terminal" style="margin-top:32px">
-      <div class="terminal-bar">
-        <span class="tbar-dot" style="background:#ff5f57"></span>
-        <span class="tbar-dot" style="background:#febc2e"></span>
-        <span class="tbar-dot" style="background:#28c840"></span>
-        <span>agent-council-chamber — syndicate-treasury</span>
+    <!-- Scroll indicator -->
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/20">
+      <span class="text-[9px] tracking-[0.3em] uppercase">Scroll</span>
+      <div class="w-px h-8 bg-gradient-to-b from-white/20 to-transparent"></div>
+    </div>
+  </section>
+
+  <!-- Agent Council -->
+  <section class="py-24 px-6 max-w-6xl mx-auto">
+    <div class="mb-14 fade-in delay-1">
+      <span class="text-[10px] tracking-[0.3em] text-primary/50 uppercase">02 // Council</span>
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mt-2 uppercase">Agent Council</h2>
+      <p class="text-sm text-white/40 mt-2 max-w-lg">Four autonomous AI agents debate every proposal using Google Gemini. Each has a distinct mandate, risk tolerance, and veto authority.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- VetoAgent -->
+      <div class="agent-card bg-[#111] border border-primary/20 border-l-4 border-l-primary p-6 glow-border">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-primary font-bold text-sm tracking-tight">VetoAgent</p>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">Compliance Logic · 1.0 ETH</p>
+          </div>
+          <span class="text-[9px] border border-primary/30 text-primary px-2 py-1 tracking-widest uppercase">Security</span>
+        </div>
+        <p class="text-xs text-white/50 leading-relaxed">
+          Hard veto authority. Instantly rejects any proposal targeting blacklisted addresses. The last line of defense — one NO from VetoAgent kills the proposal.
+        </p>
+        <div class="mt-4 pt-4 border-t border-white/5 flex gap-3 text-[9px] text-white/30 uppercase tracking-widest">
+          <span>Delay: 0.5–1s</span>
+          <span>·</span>
+          <span>Model: Gemini 2.0 Flash</span>
+        </div>
       </div>
-      <div class="terminal-body">
-        <span class="t t-dim">⏳ Proposal submitted. Convening agent council...</span>
-        <span class="t"> </span>
-        <span class="t t-dim">Proposal : a3f92c1d…  Amount : 0.5 ETH  To : 0xDemoTarget…</span>
-        <span class="t"> </span>
-        <span class="t t-dim">━━━━━━ AGENT DELIBERATION ━━━━━━</span>
-        <span class="t"> </span>
-        <span class="t"><span class="t-purple t-bold">[VetoAgent]: </span><span class="t-dim">✅ Recipient not blacklisted →</span> <span class="t-green">YES</span></span>
-        <span class="t t-green">→ APPROVED ✅</span>
-        <span class="t"> </span>
-        <span class="t"><span class="t-yellow t-bold">[ConservativeAgent]: </span><span class="t-dim">✅ Safe: 5.6% of treasury. Within limits →</span> <span class="t-green">YES</span></span>
-        <span class="t t-green">→ APPROVED ✅</span>
-        <span class="t"> </span>
-        <span class="t"><span class="t-red t-bold">[RiskAgent]: </span><span class="t-dim">🚀 Bullish. Treasury health: strong. Amount: negligible →</span> <span class="t-green">YES</span></span>
-        <span class="t t-green">→ APPROVED ✅</span>
-        <span class="t"> </span>
-        <span class="t"><span class="t-blue t-bold">[NeutralAgent]: </span><span class="t-dim">Unknown recipient, proceed with caution →</span> <span class="t-green">YES</span></span>
-        <span class="t t-green">→ APPROVED ✅</span>
-        <span class="t"> </span>
-        <span class="t t-yellow t-bold">━━━━━━━━━━ COUNCIL VERDICT ━━━━━━━━━━</span>
-        <span class="t t-green t-bold">70.0% YES — CONSENSUS REACHED</span>
-        <span class="t t-blue">🔐 OWS signing transaction...</span>
-        <span class="t t-green">✓ Transaction signed: 0xca880cd4e8239e91aecb...</span>
+
+      <!-- ConservativeAgent -->
+      <div class="agent-card bg-[#111] border border-white/10 border-l-4 border-l-yellow-400/60 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-yellow-400/80 font-bold text-sm tracking-tight">ConservativeAgent</p>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">Risk Mitigation · 2.0 ETH</p>
+          </div>
+          <span class="text-[9px] border border-yellow-400/20 text-yellow-400/60 px-2 py-1 tracking-widest uppercase">Caution</span>
+        </div>
+        <p class="text-xs text-white/50 leading-relaxed">
+          Financial risk auditor. Blocks if withdrawal exceeds 20% of treasury or if transaction frequency in 24h is too high. Liquidity over yield.
+        </p>
+        <div class="mt-4 pt-4 border-t border-white/5 flex gap-3 text-[9px] text-white/30 uppercase tracking-widest">
+          <span>Delay: 1–2s</span>
+          <span>·</span>
+          <span>Model: Gemini 2.0 Flash</span>
+        </div>
+      </div>
+
+      <!-- RiskAgent -->
+      <div class="agent-card bg-[#111] border border-white/10 border-l-4 border-l-orange-400/60 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-orange-400/80 font-bold text-sm tracking-tight">RiskAgent</p>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">Treasury Yield · 2.0 ETH</p>
+          </div>
+          <span class="text-[9px] border border-orange-400/20 text-orange-400/60 px-2 py-1 tracking-widest uppercase">Aggressive</span>
+        </div>
+        <p class="text-xs text-white/50 leading-relaxed">
+          Aggressive growth mandate. Approves almost everything unless the withdrawal would drain over 80% of the treasury. High conviction, high velocity.
+        </p>
+        <div class="mt-4 pt-4 border-t border-white/5 flex gap-3 text-[9px] text-white/30 uppercase tracking-widest">
+          <span>Delay: 1.5–3s</span>
+          <span>·</span>
+          <span>Model: Gemini 2.0 Flash</span>
+        </div>
+      </div>
+
+      <!-- NeutralAgent -->
+      <div class="agent-card bg-[#111] border border-white/10 border-l-4 border-l-sky-400/60 p-6">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <p class="text-sky-400/80 font-bold text-sm tracking-tight">NeutralAgent</p>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mt-0.5">Yield Analysis · 2.0 ETH</p>
+          </div>
+          <span class="text-[9px] border border-sky-400/20 text-sky-400/60 px-2 py-1 tracking-widest uppercase">Balanced</span>
+        </div>
+        <p class="text-xs text-white/50 leading-relaxed">
+          Balanced swing vote. Approves if the amount is under 50% of treasury. Provides the equilibrium between RiskAgent and ConservativeAgent.
+        </p>
+        <div class="mt-4 pt-4 border-t border-white/5 flex gap-3 text-[9px] text-white/30 uppercase tracking-widest">
+          <span>Delay: 2–3s</span>
+          <span>·</span>
+          <span>Model: Gemini 2.0 Flash</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="py-24 px-6 border-t border-white/5">
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-14">
+        <span class="text-[10px] tracking-[0.3em] text-primary/50 uppercase">03 // Protocol</span>
+        <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mt-2 uppercase">How It Works</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-0 relative">
+        <!-- connector line -->
+        <div class="hidden md:block absolute top-8 left-1/6 right-1/6 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" style="left:16.666%;right:16.666%;"></div>
+
+        <!-- Step 1 -->
+        <div class="relative p-8 border border-white/5 bg-[#0f0f0f]">
+          <div class="w-10 h-10 border border-primary/40 flex items-center justify-center text-primary font-black text-sm mb-6">01</div>
+          <h3 class="text-white font-bold text-base uppercase tracking-tight mb-3">Propose</h3>
+          <p class="text-xs text-white/40 leading-relaxed">
+            Any treasury member submits a withdrawal proposal: recipient address, ETH amount, and purpose. The proposal is immediately broadcast to all agents.
+          </p>
+          <div class="mt-6 font-mono text-[10px] text-primary/40 border-l border-primary/20 pl-3">
+            POST /pool/propose
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="relative p-8 border border-primary/20 bg-primary/[0.02] glow-border">
+          <div class="w-10 h-10 border border-primary flex items-center justify-center text-primary font-black text-sm mb-6 glow-border">02</div>
+          <h3 class="text-primary font-bold text-base uppercase tracking-tight mb-3">Agents Deliberate</h3>
+          <p class="text-xs text-white/40 leading-relaxed">
+            Four Gemini-powered agents independently analyze the proposal. Each votes YES or NO with a reasoning statement. VetoAgent holds hard-veto authority.
+          </p>
+          <div class="mt-6 font-mono text-[10px] text-primary/40 border-l border-primary/20 pl-3">
+            Gemini 2.0 Flash · ≥51% VP
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="relative p-8 border border-white/5 bg-[#0f0f0f]">
+          <div class="w-10 h-10 border border-primary/40 flex items-center justify-center text-primary font-black text-sm mb-6">03</div>
+          <h3 class="text-white font-bold text-base uppercase tracking-tight mb-3">OWS Signs</h3>
+          <p class="text-xs text-white/40 leading-relaxed">
+            When ≥51% voting power approves, the Open Wallet Standard executes the transfer on Base Sepolia. Private keys never touch the application layer.
+          </p>
+          <div class="mt-6 font-mono text-[10px] text-primary/40 border-l border-primary/20 pl-3">
+            eip155:84532 · withdrawal-policy
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- How it works -->
-<section id="flow">
-  <div class="container">
-    <div class="section-label">// protocol flow</div>
-    <div class="section-title">Three steps. No compromises.</div>
-    <div class="flow">
-      <div class="flow-step">
-        <div class="flow-num">01 //</div>
-        <div class="flow-title">Propose</div>
-        <div class="flow-desc">Any member with ETH staked can propose a withdrawal.
-        Specify recipient, amount, and reason.</div>
-      </div>
-      <div class="flow-step">
-        <div class="flow-num">02 //</div>
-        <div class="flow-title">Agents Deliberate</div>
-        <div class="flow-desc">AI agents analyze the proposal in real-time. Each
-        votes YES or NO based on treasury health, recipient history, and risk profile.</div>
-      </div>
-      <div class="flow-step">
-        <div class="flow-num">03 //</div>
-        <div class="flow-title">OWS Signs</div>
-        <div class="flow-desc">If YES ≥ 51% by voting power, the OWS policy engine
-        authorizes the transaction. Keys never leave the wallet.</div>
+  <!-- Live TX Badge -->
+  <section class="py-20 px-6">
+    <div class="max-w-3xl mx-auto">
+      <div class="border border-primary/20 bg-primary/[0.03] p-8 glow-border">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <div class="flex items-center gap-2 mb-3">
+              <span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+              <span class="text-[10px] text-primary uppercase tracking-[0.3em]">Live Transaction</span>
+            </div>
+            <p class="text-white font-bold text-sm mb-1">OWS Withdrawal Executed</p>
+            <p class="text-[10px] text-white/40 uppercase tracking-widest">Base Sepolia · Block confirmed · Policy: withdrawal-policy</p>
+          </div>
+          <div class="font-mono text-xs text-primary/70 bg-black/40 border border-primary/10 px-4 py-3 break-all">
+            0xca880cd4e8239e91aecb537654d49b7b<br/>67f14af68c762b5df6a86562986312b9
+          </div>
+        </div>
+        <div class="mt-6 pt-6 border-t border-white/5 grid grid-cols-3 gap-4 text-center">
+          <div>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mb-1">Quorum</p>
+            <p class="text-primary font-bold text-sm">51%+ VP</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mb-1">Chain</p>
+            <p class="text-primary font-bold text-sm">Base Sepolia</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-white/30 uppercase tracking-widest mb-1">Signer</p>
+            <p class="text-primary font-bold text-sm">OWS Policy</p>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- Footer -->
-<footer>
-  <div class="container">
-    <p style="margin-bottom:8px">
-      <a href="https://github.com/mehmetkr-31/Syndicate" target="_blank">github.com/mehmetkr-31/Syndicate</a>
-    </p>
-    <p>Built for OWS Hackathon · April 2026</p>
-  </div>
-</footer>
+  <!-- Tech Stack -->
+  <section class="py-16 px-6 border-t border-white/5">
+    <div class="max-w-5xl mx-auto">
+      <p class="text-[10px] text-white/20 uppercase tracking-[0.3em] text-center mb-8">Built With</p>
+      <div class="flex flex-wrap items-center justify-center gap-6">
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">OWS</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">Base Sepolia</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">Google Gemini 2.0</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">Node.js</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">React</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">ethers.js</span>
+        <span class="text-[10px] text-white/30 border border-white/10 px-4 py-2 uppercase tracking-widest hover:border-primary/30 hover:text-primary/60 transition-colors cursor-default">MoonPay</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-10 px-6">
+    <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="text-primary font-black text-lg tracking-tighter glow-text">⬡ SYNDICATE</div>
+      <p class="text-[10px] text-white/20 uppercase tracking-widest">Autonomous AI Agent Treasury · OWS-Native · Base Sepolia</p>
+      <a
+        href="https://github.com/mehmetkr-31/Syndicate"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-[10px] text-primary/50 uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </footer>
 
 </body>
 </html>
