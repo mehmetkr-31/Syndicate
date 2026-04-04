@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 
 function timeAgo(ts) {
@@ -19,6 +19,18 @@ export default function Vote({ state, onSuccess }) {
   const [filter, setFilter]               = useState("active");
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [votingId, setVotingId]           = useState(null);
+
+  useEffect(() => {
+    if (!humans.length) {
+      if (selectedVoter) setSelectedVoter("");
+      return;
+    }
+
+    const stillExists = humans.some(member => member.address === selectedVoter);
+    if (!selectedVoter || !stillExists) {
+      setSelectedVoter(humans[0].address);
+    }
+  }, [humans, selectedVoter]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return proposals;
@@ -84,8 +96,10 @@ export default function Vote({ state, onSuccess }) {
       {/* Proposal list */}
       <div className="space-y-6">
         {filtered.map(p => {
-          const yesPct = (p.votes.yes / totalVP) * 100;
-          const noPct  = (p.votes.no / totalVP) * 100;
+          const yesVP = p.votes.filter(v => v.vote === "yes").reduce((sum, v) => sum + (members.find(m => m.address === v.member)?.votingPower || 0), 0);
+          const noVP = p.votes.filter(v => v.vote === "no").reduce((sum, v) => sum + (members.find(m => m.address === v.member)?.votingPower || 0), 0);
+          const yesPct = (yesVP / totalVP) * 100;
+          const noPct  = (noVP / totalVP) * 100;
           const busy   = isSubmitting && votingId === p.id;
 
           if (p.status === "active") {
@@ -117,7 +131,7 @@ export default function Vote({ state, onSuccess }) {
                   <div>
                     <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2 text-primary">
                       <span>{yesPct.toFixed(1)}% YES</span>
-                      <span className="text-gray-500">{p.votes.yes.toFixed(1)} VP</span>
+                      <span className="text-gray-500">{yesVP.toFixed(1)} VP</span>
                     </div>
                     <div className="h-1 bg-surface-container-highest relative overflow-hidden">
                       <div className="h-full bg-primary animate-pulse-glow" style={{ width: `${yesPct}%` }}></div>
@@ -126,7 +140,7 @@ export default function Vote({ state, onSuccess }) {
                   <div>
                     <div className="flex justify-between font-mono text-[10px] uppercase tracking-widest mb-2 text-error">
                       <span>{noPct.toFixed(1)}% NO</span>
-                      <span className="text-gray-500">{p.votes.no.toFixed(1)} VP</span>
+                      <span className="text-gray-500">{noVP.toFixed(1)} VP</span>
                     </div>
                     <div className="h-1 bg-surface-container-highest relative overflow-hidden">
                       <div className="h-full bg-error" style={{ width: `${noPct}%` }}></div>

@@ -1,41 +1,83 @@
 import React, { useState, useEffect, useRef } from "react";
 import { api } from "../api";
 
-/* ─── Typewriter hook ─────────────────────────────────────── */
-function useTypewriter(lines, charDelay = 15, lineDelay = 350) {
+function useTypewriter(lines, resetKey, charDelay = 15, lineDelay = 350) {
   const [out, setOut] = useState([]);
   const [done, setDone] = useState(false);
   const cancel = useRef(false);
+  const state = useRef({ li: 0, ci: 0 });
+
+  useEffect(() => {
+    setOut([]);
+    setDone(false);
+    state.current = { li: 0, ci: 0 };
+  }, [resetKey]);
 
   useEffect(() => {
     cancel.current = false;
-    setOut([]);
-    setDone(false);
-    if (!lines || lines.length === 0) { setDone(true); return; }
+    if (!lines || lines.length === 0) { 
+       if (state.current.li === 0) setDone(true);
+       return; 
+    }
+    
+    // Refresh already typed lines to catch any synchronous updates from parent (e.g. state changes)
+    setOut(prev => {
+      let isChanged = false;
+      const synced = prev.map((item, idx) => {
+        if (idx < state.current.li && lines[idx]) {
+           if (item.text !== lines[idx].text || item.color !== lines[idx].color) {
+             isChanged = true;
+             return { ...lines[idx], text: lines[idx].text };
+           }
+        }
+        return item;
+      });
+      return isChanged ? synced : prev;
+    });
 
-    let li = 0, ci = 0;
-    const rows = [];
+    if (state.current.li >= lines.length) {
+       setDone(true);
+       return;
+    }
+    setDone(false);
 
     function tick() {
       if (cancel.current) return;
-      if (li >= lines.length) { setDone(true); return; }
+      let { li, ci } = state.current;
+      if (li >= lines.length) { 
+        setDone(true); 
+        return; 
+      }
 
-      const line = lines[li];
-      if (ci === 0) rows.push({ ...line, text: "" });
-      rows[li].text = line.text.slice(0, ci + 1);
-      setOut([...rows]);
-      ci++;
+      setOut(prev => {
+        const newOut = [...prev];
+        const line = lines[li];
+        if (!newOut[li]) newOut[li] = { ...line, text: "" };
+        
+        // Sync any past lines just in case
+        for (let i = 0; i < li; i++) {
+           if (newOut[i] && lines[i]) {
+              newOut[i] = { ...lines[i], text: lines[i].text };
+           }
+        }
+        
+        newOut[li] = { ...line, text: line.text.slice(0, ci + 1) };
+        return newOut;
+      });
 
-      if (ci >= line.text.length) {
-        li++; ci = 0;
+      state.current.ci++;
+      if (state.current.ci >= lines[li].text.length) {
+        state.current.li++; 
+        state.current.ci = 0;
         setTimeout(tick, lineDelay);
       } else {
         setTimeout(tick, charDelay);
       }
     }
-    setTimeout(tick, 300);
+
+    setTimeout(tick, 30);
     return () => { cancel.current = true; };
-  }, [lines]);
+  }, [lines, charDelay, lineDelay]);
 
   return { out, done };
 }
@@ -86,6 +128,18 @@ export default function Council({ state, onSuccess }) {
   const scrollRef = useRef(null);
 
   useEffect(() => {
+    if (!humans.length) {
+      if (proposer) setProposer("");
+      return;
+    }
+
+    const stillExists = humans.some(member => member.address === proposer);
+    if (!proposer || !stillExists) {
+      setProposer(humans[0].address);
+    }
+  }, [humans, proposer]);
+
+  useEffect(() => {
     if (!latest) {
       setLines([
         { type: "sys",   text: "Council Chamber terminal live." },
@@ -101,22 +155,48 @@ export default function Council({ state, onSuccess }) {
       { type: "divider", text: "━━━━━━━━━━━━━━ AGENT DELIBERATION ━━━━━━━━━━━━━━" },
     ];
 
+    let allAgentsVoted = true;
+
     agents.forEach(a => {
       const config = AGENT_CONFIG[a.name] || AGENT_CONFIG.VetoAgent;
-      script.push({ type: "agent", agent: a.name, color: config.color, text: `Analyzing treasury impact of ${latest.amount.toFixed(2)} ETH.` });
-      script.push({ type: "pass",  color: config.color, text: `✅ Clearance granted for ${a.name}.` });
+      const voteObj = latest.votes.find(v => v.member === a.address);
+
+      if (voteObj) {
+        script.push({ type: "agent", agent: a.name, color: config.color, text: `Analyzing treasury impact of ${latest.amount.toFixed(2)} ETH.` });
+        if (voteObj.vote === "no") {
+           script.push({ type: "pass", color: "text-error", text: `🚫 VETO: ${voteObj.reason}` });
+        } else {
+           script.push({ type: "pass", color: config.color, text: `✅ CLEARANCE: ${voteObj.reason}` });
+        }
+      } else {
+        allAgentsVoted = false;
+        script.push({ type: "agent", agent: a.name, color: config.color, text: `Analyzing treasury impact of ${latest.amount.toFixed(2)} ETH...` });
+      }
     });
 
-    script.push({ type: "net", text: "Broadcasting deliberation signals to all active agents..." });
-    
-    const yesPct = ((latest.votes.yes / (latest.votes.yes + latest.votes.no || 1)) * 100).toFixed(1);
-    script.push({ type: "result", text: `${yesPct}% YES` });
-    script.push({ type: "status", text: "CONSENSUS REACHED" });
+    if (allAgentsVoted || latest.status === "rejected" || latest.status === "executed") {
+      script.push({ type: "net", text: "Broadcasting deliberation signals to all active agents..." });
+      const yesVP = latest.votes.filter(v => v.vote === "yes").reduce((sum, v) => sum + (members.find(m => m.address === v.member)?.votingPower || 0), 0);
+      const noVP = latest.votes.filter(v => v.vote === "no").reduce((sum, v) => sum + (members.find(m => m.address === v.member)?.votingPower || 0), 0);
+      const totalVP = yesVP + noVP || 1;
+      const yesPct = ((yesVP / totalVP) * 100).toFixed(1);
+      script.push({ type: "result", text: `${yesPct}% YES` });
+      script.push({ type: "status", text: latest.status === "rejected" ? "PROPOSAL REJECTED" : "CONSENSUS REACHED" });
+    }
     
     setLines(script);
-  }, [latest?.id, agents.length]);
+  }, [latest?.id, latest?.status, latest?.votes?.length, agents.length]);
 
-  const { out, done } = useTypewriter(lines, 10, 300);
+  const { out, done } = useTypewriter(lines, latest?.id, 10, 300);
+
+  // Dedicated fast-polling loop to get agent votes instantly instead of waiting 5 seconds
+  useEffect(() => {
+    let id;
+    if (latest && latest.status === "active") {
+      id = setInterval(() => { if (onSuccess) onSuccess(); }, 1500);
+    }
+    return () => { if (id) clearInterval(id); };
+  }, [latest?.id, latest?.status, onSuccess]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;

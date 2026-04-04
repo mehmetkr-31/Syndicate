@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
@@ -56,7 +56,7 @@ export default {
         "inverse-primary":            "#006e37",
         "inverse-surface":            "#fcf8f8",
         "inverse-on-surface":         "#565554",
-        "purple-400":                 "#c084fc", // For VetoAgent
+        "purple-400":                 "#c084fc",
       },
       borderRadius: {
         none:    "0px",

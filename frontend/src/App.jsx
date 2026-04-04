@@ -142,7 +142,7 @@ export default function App() {
 
         {/* Footer Ticker */}
         <footer className="mt-auto border-t border-outline-variant/10 bg-black/50 py-2 overflow-hidden shrink-0">
-          <div className="flex whitespace-nowrap gap-12 font-mono text-[9px] text-primary/60 tracking-widest animate-scroll-left uppercase">
+          <div className="flex whitespace-nowrap gap-12 font-mono text-[9px] text-primary/60 tracking-widest animate-marquee uppercase">
             {[
               `DAI/USDT: 1.0001`,
               `ETH/USD: 2,491.12 ▲`,
