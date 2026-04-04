@@ -114,8 +114,15 @@ export default function Council({ state, onSuccess }) {
   const members = state?.members ?? [];
   const humans  = members.filter(m => !m.isAgent);
   const agents  = members.filter(m => m.isAgent);
-  const active  = (state?.proposals ?? []).filter(p => p.status === "active");
-  const latest  = active[0] ?? null;
+
+  const [watchedProposalId, setWatchedProposalId] = useState(null);
+
+  const allProposals    = state?.proposals ?? [];
+  const activeProposal  = allProposals.find(p => p.status === "active") ?? null;
+  const watchedProposal = watchedProposalId
+    ? (allProposals.find(p => p.id === watchedProposalId) ?? null)
+    : null;
+  const latest = watchedProposal || activeProposal;
 
   const [proposer, setProposer]         = useState(humans[0]?.address || "");
   const [toAddress, setToAddress]       = useState("");
@@ -180,8 +187,18 @@ export default function Council({ state, onSuccess }) {
       const noVP = latest.votes.filter(v => v.vote === "no").reduce((sum, v) => sum + (members.find(m => m.address === v.member)?.votingPower || 0), 0);
       const totalVP = yesVP + noVP || 1;
       const yesPct = ((yesVP / totalVP) * 100).toFixed(1);
-      script.push({ type: "result", text: `${yesPct}% YES` });
-      script.push({ type: "status", text: latest.status === "rejected" ? "PROPOSAL REJECTED" : "CONSENSUS REACHED" });
+      script.push({ type: "divider", text: "━━━━━━━━━━━━━━ COUNCIL VERDICT ━━━━━━━━━━━━━━" });
+      if (latest.status === "executed") {
+        script.push({ type: "result", text: `${yesPct}% YES — CONSENSUS REACHED` });
+        script.push({ type: "ows",    text: "OWS signing transaction..." });
+        script.push({ type: "tx",     text: `Transaction signed: ${latest.txHash || "0x...pending"}` });
+      } else if (latest.status === "rejected") {
+        script.push({ type: "result", text: `${yesPct}% YES — PROPOSAL REJECTED` });
+        script.push({ type: "status", text: "PROPOSAL REJECTED" });
+      } else {
+        script.push({ type: "result", text: `${yesPct}% YES` });
+        script.push({ type: "status", text: "CONSENSUS REACHED" });
+      }
     }
     
     setLines(script);
@@ -207,7 +224,8 @@ export default function Council({ state, onSuccess }) {
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.propose(proposer, toAddress, parseFloat(amount), description);
+      const data = await api.propose(proposer, toAddress, parseFloat(amount), description);
+      setWatchedProposalId(data.proposal.id);
       setToAddress(""); setAmount(""); setDescription("");
       if (onSuccess) onSuccess();
     } catch (err) {
@@ -280,13 +298,22 @@ export default function Council({ state, onSuccess }) {
               ></textarea>
             </div>
             {error && <p className="font-mono text-xs text-error border-l-2 border-error pl-3">{error}</p>}
-            <button 
-              onClick={handlePropose}
-              disabled={isSubmitting || !toAddress || !amount}
-              className="w-full bg-tertiary text-on-tertiary font-headline font-extrabold uppercase py-4 tracking-[0.3em] text-xs shadow-[0_0_15px_rgba(255,189,94,0.3)] hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <span>⚡ Convene Council</span>
-            </button>
+            {watchedProposalId && latest && latest.status !== "active" ? (
+              <button
+                onClick={() => setWatchedProposalId(null)}
+                className="w-full bg-surface-container border border-primary/40 text-primary font-headline font-extrabold uppercase py-4 tracking-[0.3em] text-xs hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              >
+                <span>+ New Proposal</span>
+              </button>
+            ) : (
+              <button
+                onClick={handlePropose}
+                disabled={isSubmitting || !toAddress || !amount || (watchedProposalId != null && latest?.status === "active")}
+                className="w-full bg-tertiary text-on-tertiary font-headline font-extrabold uppercase py-4 tracking-[0.3em] text-xs shadow-[0_0_15px_rgba(255,189,94,0.3)] hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <span>⚡ Convene Council</span>
+              </button>
+            )}
           </div>
         </section>
 
@@ -354,7 +381,19 @@ export default function Council({ state, onSuccess }) {
                 </div>
               );
               if (line.type === "pass") return (
-                <div key={i} className={`flex gap-3 ml-10 ${line.color}`}><span>✅</span> <span>{line.text}</span></div>
+                <div key={i} className={`ml-10 ${line.color}`}>{line.text}</div>
+              );
+              if (line.type === "ows") return (
+                <div key={i} className="flex gap-3">
+                  <span className="text-tertiary">[OWS]:</span>
+                  <span className="text-on-surface opacity-90 italic">{line.text}</span>
+                </div>
+              );
+              if (line.type === "tx") return (
+                <div key={i} className="flex gap-3 break-all">
+                  <span className="text-primary shrink-0">✓</span>
+                  <span className="text-primary font-mono text-xs" style={{ textShadow: "0 0 8px rgba(164, 255, 185, 0.3)" }}>{line.text}</span>
+                </div>
               );
               if (line.type === "net") return (
                 <div key={i} className="flex gap-3">

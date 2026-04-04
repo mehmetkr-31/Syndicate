@@ -19,6 +19,7 @@ export default function Vote({ state, onSuccess }) {
   const [filter, setFilter]               = useState("active");
   const [isSubmitting, setIsSubmitting]   = useState(false);
   const [votingId, setVotingId]           = useState(null);
+  const [voteError, setVoteError]         = useState(null);
 
   useEffect(() => {
     if (!humans.length) {
@@ -41,11 +42,13 @@ export default function Vote({ state, onSuccess }) {
     if (!selectedVoter) return;
     setIsSubmitting(true);
     setVotingId(proposalId);
+    setVoteError(null);
     try {
       await api.vote(proposalId, selectedVoter, voteType);
       if (onSuccess) onSuccess();
     } catch (err) {
-      alert("Vote error: " + err.message);
+      setVoteError({ id: proposalId, message: err.message });
+      if (onSuccess) onSuccess(); // refresh state — proposal may have been executed by agents
     } finally {
       setIsSubmitting(false);
       setVotingId(null);
@@ -158,9 +161,14 @@ export default function Vote({ state, onSuccess }) {
                   </p>
                 </div>
 
+                {voteError?.id === p.id && (
+                  <div className="mb-4 font-mono text-xs text-error border-l-2 border-error pl-3 bg-error/5 py-2">
+                    {voteError.message}
+                  </div>
+                )}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-outline-variant/10">
                   <div className="flex gap-3">
-                    <button 
+                    <button
                       onClick={() => handleVote(p.id, "yes")}
                       disabled={busy}
                       className="bg-primary text-on-primary px-8 py-3 font-headline font-extrabold text-xs tracking-widest uppercase hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-50"
@@ -168,7 +176,7 @@ export default function Vote({ state, onSuccess }) {
                       <span className="material-symbols-outlined text-sm">check_circle</span>
                       {busy ? "voting..." : "Vote Yes"}
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleVote(p.id, "no")}
                       disabled={busy}
                       className="px-8 py-3 font-headline font-extrabold text-xs tracking-widest uppercase border border-outline-variant/30 text-gray-500 hover:border-error hover:text-error transition-all flex items-center gap-2 disabled:opacity-50"

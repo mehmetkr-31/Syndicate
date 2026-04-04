@@ -134,7 +134,7 @@ export default function App() {
         <div className="flex-1 p-8">
           {tab === "dashboard" && <Dashboard state={state} onNavigate={setTab} />}
           {tab === "deposit"   && <Deposit   state={state} onSuccess={refresh} />}
-          {tab === "propose"   && <ProposeWithdrawal state={state} onSuccess={() => { refresh(); setTab("vote"); }} />}
+          {tab === "propose"   && <ProposeWithdrawal state={state} onSuccess={() => { refresh(); setTab("council"); }} />}
           {tab === "vote"      && <Vote      state={state} onSuccess={refresh} />}
           {tab === "activity"  && <ActivityLog history={history} />}
           {tab === "council"   && <Council   state={state} onSuccess={refresh} />}
