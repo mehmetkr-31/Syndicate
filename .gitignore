@@ -1,4 +1,24 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Environment variables — never commit real keys
 .env
-*.local
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Test / debug snapshots
+backend/prop*.json
+backend/state_check.json
+
+# Claude Code session files
+.claude/
+
+# Design mockups (reference only, not part of build)
+stitch/
